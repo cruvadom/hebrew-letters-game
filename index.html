@@ -1017,11 +1017,37 @@
       "טוש": "טוּשׁ", "לוח": "לוּחַ", "בובה": "בֻּבָּה", "קומקום": "קוּמְקוּם"
     };
 
+    /* A word-initial shva is only written one way, but modern Hebrew reads it two
+       ways: in פְּלָמִינְגוֹ the פ opens a consonant cluster ("flamingo", nothing between
+       the f and the l), while in לְטָאָה the ל is simply read "le". Only the first kind
+       teaches what a shva looks like, so the words are listed by hand here. Any shva
+       word missing from this list is left out of the vowel levels entirely.
+       Remove a word from the list if it sounds like "e" when you say it aloud. */
+    var SHVA_SILENT = {
+      "צפרדע": 1,    /* tsfardea  */
+      "גבינה": 1,    /* gvina     */
+      "ספינה": 1,    /* sfina     */
+      "דבורה": 1,    /* dvora     */
+      "גלידה": 1,    /* glida     */
+      "פסנתר": 1,    /* psanter   */
+      "דלי": 1,      /* dli       */
+      "כפפות": 1,    /* kfafot    */
+      "דבש": 1,      /* dvash     */
+      "סנאי": 1,     /* snai      */
+      "זבוב": 1,     /* zvuv      */
+      "טרקטור": 1,   /* traktor   */
+      "פלמינגו": 1,  /* flamingo  */
+      "ברוקולי": 1,  /* brokoli   */
+      "ספוג": 1,     /* sfog      */
+      "תמונה": 1     /* tmuna     */
+    };
+
     var NIKUD = {};
     (function () {
       for (var i = 0; i < WORDS.length; i++) {
         var w = WORDS[i].word;
         var v = firstVowelOf(w, SAY[w] || w);
+        if (v === "s" && !SHVA_SILENT[w]) continue;   /* shva read as "e", not a good example */
         if (v) NIKUD[w] = v;
       }
     })();
@@ -1469,8 +1495,9 @@
 
       var w = current.word;
       var cls = NIKUD[w];
-      /* A holam male or shuruk belongs on the vav, not on the first letter. */
-      if ((cls === "o" || cls === "u") && w.charAt(1) === VAV) {
+      /* An o or u sound belongs on the vav whenever the plain spelling has one,
+         even when the vocalized form writes it as a holam haser on the letter. */
+      if ((cls === "o" || cls === "h" || cls === "u") && w.charAt(1) === VAV) {
         return w.charAt(0) + VAV + (cls === "u" ? DAGESH : HOLAM) + w.slice(2);
       }
       return w.charAt(0) + MARK[cls] + w.slice(1);

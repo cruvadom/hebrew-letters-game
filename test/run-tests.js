@@ -633,7 +633,7 @@ for (var rv = 0; rv < 400; rv++) {
   level = 15; solved = 0;
   nextQuestion();
   var cls14 = NIKUD[current.word];
-  if ((cls14 === "o" || cls14 === "u") && current.word.charAt(1) === VAV) {
+  if ((cls14 === "o" || cls14 === "h" || cls14 === "u") && current.word.charAt(1) === VAV) {
     checkedVav++;
     var want14 = current.word.charAt(0) + VAV +
       (cls14 === "u" ? DAGESH : HOLAM) + current.word.slice(2);
@@ -696,6 +696,23 @@ check(faceBad === 0, faceBad + " level 13 buttons rendered the wrong mark");
 level = 13; solved = 0; nextQuestion();
 print("sample L13 buttons: " + faces().join("  ") + "   word: " + current.word +
       "  reveal: " + revealText());
+
+// only hand-vetted shva words may be used as shva examples
+var shvaPool = {};
+for (var sp in NIKUD) if (NIKUD[sp] === "s") shvaPool[sp] = true;
+var notVetted = [];
+for (var vp in shvaPool) if (!SHVA_SILENT[vp]) notVetted.push(vp);
+check(notVetted.length === 0, "unvetted shva words in play: " + notVetted.join(" "));
+print(keysOf(shvaPool).length + " vetted shva words: " + keysOf(shvaPool).join(" "));
+
+level = 13; solved = 0;
+var offPool = {};
+for (var sq = 0; sq < 800; sq++) {
+  nextQuestion();
+  if (currentAnswer === "s" && !SHVA_SILENT[current.word]) offPool[current.word] = true;
+}
+check(keysOf(offPool).length === 0, "shva questions used unvetted words: " + keysOf(offPool).join(" "));
+print("every shva question comes from the vetted list");
 
 print("");
 print(failures === 0 ? "ALL CHECKS PASSED" : failures + " CHECK(S) FAILED");
