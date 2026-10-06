@@ -184,7 +184,13 @@ function sample(lvl, n) {
   for (i = 0; i < n; i++) {
     nextQuestion();
     var vals = values();
-    var expect = LEVELS[lvl].mode === "nikud" ? LEVELS[lvl].groups[0].chars.length : 3;
+    var expect;
+    if (LEVELS[lvl].mode === "nikud" || LEVELS[lvl].mode === "sound") {
+      var avail = LEVELS[lvl].groups[0].chars.length;
+      expect = Math.min(LEVELS[lvl].options || avail, avail);
+    } else {
+      expect = 3;
+    }
     check(vals.length === expect, "level " + lvl + " gave " + vals.length + " options, want " + expect);
     var uniq = {}; for (j = 0; j < vals.length; j++) uniq[vals[j]] = true;
     var nU = 0; for (j in uniq) nU++;
@@ -460,7 +466,7 @@ dropTimers();
 // every letter that can appear as an option needs a spoken name
 var allKeys = {};
 for (var L = 1; L <= MAX_LEVEL; L++) {
-  if (LEVELS[L].mode === "nikud") continue;
+  if (LEVELS[L].mode !== "first" && LEVELS[L].mode !== "last") continue;
   for (var gg = 0; gg < LEVELS[L].groups.length; gg++) {
     var gk = LEVELS[L].groups[gg].keys;
     for (var ki = 0; ki < gk.length; ki++) allKeys[gk[ki]] = true;
@@ -516,6 +522,104 @@ for (var nl = 6; nl <= MAX_LEVEL; nl++) {
   check(SPOKEN.length === 0, "level " + nl + " should not speak a letter name, said " + SPOKEN.join("/"));
 }
 print("vowel levels 6-" + MAX_LEVEL + " stay silent when an option is pressed");
+
+// --------------------------------------------------------- sound levels
+print("");
+print("=== sound levels ===");
+var SOUND_SPEC = { 13: "OE", 14: "OU", 15: "AEIOU" };
+var SOUND_LABEL = { A: "a", E: "e", I: "i", O: "o", U: "u" };
+
+var sTally = {};
+for (var sk in NIKUD) {
+  var snd = SOUND_OF[NIKUD[sk]];
+  sTally[snd] = (sTally[snd] || 0) + 1;
+}
+print("words per sound: a=" + sTally.A + " e=" + sTally.E + " i=" + sTally.I +
+      " o=" + sTally.O + " u=" + sTally.U);
+for (var need in SOUND_SPEC) {
+  var spec = SOUND_SPEC[need];
+  for (var sc = 0; sc < spec.length; sc++) {
+    check((sTally[spec.charAt(sc)] || 0) >= 8,
+      "level " + need + " sound " + SOUND_LABEL[spec.charAt(sc)] +
+      " has only " + (sTally[spec.charAt(sc)] || 0) + " words");
+  }
+}
+
+for (var sl = 13; sl <= 15; sl++) {
+  var want = LEVELS[sl].options || SOUND_SPEC[sl].length;
+  var rs = sample(sl, N), ps = [], slo = 100, shi = 0, si;
+  for (si = 0; si < SOUND_SPEC[sl].length; si++) {
+    var sch = SOUND_SPEC[sl].charAt(si);
+    var spct = Math.round((rs.hits[sch] || 0) * 100 / N);
+    ps.push(SOUND_LABEL[sch] + " " + spct + "%");
+    if (spct < slo) slo = spct;
+    if (spct > shi) shi = spct;
+  }
+  var seven = Math.round(100 / SOUND_SPEC[sl].length);
+  check(slo >= seven - 8 && shi <= seven + 8,
+    "level " + sl + " unbalanced: " + ps.join(", ") + " (want ~" + seven + "% each)");
+  var extras = keysOf(rs.hits);
+  for (si = 0; si < extras.length; si++) {
+    check(SOUND_SPEC[sl].indexOf(extras[si]) !== -1,
+      "level " + sl + " answered " + extras[si] + ", outside spec");
+  }
+  print("L" + sl + " (" + want + " options): " + ps.join(", "));
+}
+
+// level 15 must always show exactly three of the five sounds
+level = 15; solved = 0;
+var threes = 0, sawAll = {};
+for (var q15 = 0; q15 < 600; q15++) {
+  nextQuestion();
+  var v15 = values();
+  if (v15.length === 3) threes++;
+  for (var z15 = 0; z15 < v15.length; z15++) sawAll[v15[z15]] = true;
+}
+check(threes === 600, "level 15 should always show 3 options, got " + threes + "/600");
+check(keysOf(sawAll).length === 5, "level 15 should use all five sounds as options");
+print("level 15 always shows 3 of the 5 sounds");
+
+// the button faces must use the canonical mark per sound, never leaking the answer
+level = 15; solved = 0;
+var leak15 = 0;
+for (var f15 = 0; f15 < 400; f15++) {
+  nextQuestion();
+  var vv15 = values(), ff15 = faces(), first15 = current.word.charAt(0);
+  for (var b15 = 0; b15 < vv15.length; b15++) {
+    var expectFace;
+    if (vv15[b15] === "O") expectFace = first15 + VAV + HOLAM;
+    else if (vv15[b15] === "U") expectFace = first15 + VAV + DAGESH;
+    else expectFace = first15 + SOUND_MARK[vv15[b15]];
+    if (ff15[b15] !== expectFace) leak15++;
+  }
+}
+check(leak15 === 0, leak15 + " buttons did not use the canonical mark for their sound");
+print("every button uses the canonical mark for its sound (no shape hints)");
+
+level = 13; solved = 0; nextQuestion();
+print("sample L13 buttons: " + faces().join("  ") + "   word: " + current.word);
+level = 14; solved = 0; nextQuestion();
+print("sample L14 buttons: " + faces().join("  ") + "   word: " + current.word);
+level = 15; solved = 0; nextQuestion();
+print("sample L15 buttons: " + faces().join("  ") + "   word: " + current.word +
+      "  reveal: " + revealText());
+
+// the reveal puts holam and shuruk on the vav, not on the first letter
+var checkedVav = 0, wrongVav = 0;
+for (var rv = 0; rv < 400; rv++) {
+  level = 14; solved = 0;
+  nextQuestion();
+  var cls14 = NIKUD[current.word];
+  if ((cls14 === "o" || cls14 === "u") && current.word.charAt(1) === VAV) {
+    checkedVav++;
+    var want14 = current.word.charAt(0) + VAV +
+      (cls14 === "u" ? DAGESH : HOLAM) + current.word.slice(2);
+    if (revealText() !== want14) wrongVav++;
+  }
+}
+check(checkedVav > 0 && wrongVav === 0,
+  wrongVav + " of " + checkedVav + " reveals put the mark in the wrong place");
+print("holam and shuruk reveals sit on the vav (" + checkedVav + " checked)");
 
 print("");
 print(failures === 0 ? "ALL CHECKS PASSED" : failures + " CHECK(S) FAILED");

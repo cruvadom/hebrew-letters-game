@@ -551,9 +551,9 @@
       correctAnswersPerLevel: 10,
 
       /* How many levels to play before the trophy. Set it to 6, for example,
-         and levels 7-12 are skipped: finishing level 6 awards the trophy and
-         starts over at level 1. Maximum is 12. */
-      numberOfLevels: 12
+         and levels 7-15 are skipped: finishing level 6 awards the trophy and
+         starts over at level 1. Maximum is 15. */
+      numberOfLevels: 15
     };
     /* ==================================================================== */
 
@@ -831,7 +831,15 @@
       { pic: "🤴", word: "מלך", letter: "מ" },
       { pic: "🛣️", word: "דרך", letter: "ד" },
       { pic: "🏖️", word: "חוף", letter: "ח" },
-      { pic: "🥇", word: "זהב", letter: "ז" }
+      { pic: "🥇", word: "זהב", letter: "ז" },
+      { pic: "🌪️", word: "סופה", letter: "ס" },
+      { pic: "🎵", word: "מוזיקה", letter: "מ" },
+      { pic: "🥣", word: "חומוס", letter: "ח" },
+      { pic: "🛍️", word: "שוק", letter: "ש" },
+      { pic: "🖊️", word: "טוש", letter: "ט" },
+      { pic: "📋", word: "לוח", letter: "ל" },
+      { pic: "🪆", word: "בובה", letter: "ב" },
+      { pic: "🫖", word: "קומקום", letter: "ק" }
     ];
 
     /* Letter names, used as a small hint under each big letter. */
@@ -859,24 +867,49 @@
     /* ---------- vowel (nikud) classes ----------
        The first letter's vowel is derived automatically from the vocalized spelling in SAY,
        so adding a word to WORDS + SAY is enough to make it available to the vowel levels.
-         a = patah      i = hirik       q = kamatz
-         y = hirik + yud (chirik male)  e = segol       t = tzere                        */
+         a = patah      i = hirik       q = kamatz    h = holam haser (שֹׁ)
+         y = hirik + yud (chirik male)  e = segol     o = holam male  (שׁוֹ)
+         t = tzere                                    u = shuruk      (שׁוּ)                */
+    var VAV = "\u05D5";
+    var HOLAM = "\u05B9";
+    var DAGESH = "\u05BC";
+
     var MARK = {
       a: "\u05B7",   /* פתח   */
       i: "\u05B4",   /* חיריק */
       q: "\u05B8",   /* קמץ   */
       y: "\u05B4",   /* חיריק מלא - the yud is added by faceOf */
       e: "\u05B6",   /* סגול  */
-      t: "\u05B5"    /* צירה  */
+      t: "\u05B5",   /* צירה  */
+      h: HOLAM,      /* חולם חסר */
+      o: HOLAM,      /* חולם מלא - normally sits on the vav */
+      u: "\u05BB"    /* שורוק - fallback only, normally the vav carries it */
     };
 
     var NIKUD_NAMES = {
       a: "פתח", i: "חיריק", q: "קמץ",
-      y: "חיריק מלא", e: "סגול", t: "צירה"
+      y: "חיריק מלא", e: "סגול", t: "צירה",
+      h: "חולם חסר", o: "חולם מלא", u: "שורוק"
     };
 
     var VOWEL_OF_MARK = {
-      "\u05B7": "a", "\u05B4": "i", "\u05B8": "q", "\u05B6": "e", "\u05B5": "t"
+      "\u05B7": "a", "\u05B4": "i", "\u05B8": "q",
+      "\u05B6": "e", "\u05B5": "t", "\u05B9": "h"
+    };
+
+    /* The five vowel sounds, used by the levels that ask for the sound rather
+       than the exact mark. */
+    var SOUND_OF = {
+      a: "A", q: "A",
+      e: "E", t: "E",
+      i: "I", y: "I",
+      h: "O", o: "O",
+      u: "U"
+    };
+
+    var SOUND_MARK = { A: "\u05B7", E: "\u05B6", I: "\u05B4" };
+    var SOUND_NAMES = {
+      A: "תנועת a", E: "תנועת e", I: "תנועת i", O: "תנועת o", U: "תנועת u"
     };
 
     /* Combining marks that may sit on a letter before its vowel (dagesh, shin/sin dot...). */
@@ -885,15 +918,25 @@
 
     function firstVowelOf(plain, voiced) {
       var found = "";
-      for (var i = 1; i < voiced.length && COMBINING.indexOf(voiced.charAt(i)) !== -1; i++) {
+      var i = 1;
+      for (; i < voiced.length && COMBINING.indexOf(voiced.charAt(i)) !== -1; i++) {
         var v = VOWEL_OF_MARK[voiced.charAt(i)];
         if (v && !found) found = v;
       }
-      if (!found) return "";
-      /* A hirik written with a following yud is what the child actually sees on screen,
-         so classify it from the plain spelling rather than the vocalized one. */
-      if (found === "i" && plain.charAt(1) === "י") return "y";
-      return found;
+
+      if (found) {
+        /* A hirik written with a following yud is what the child actually sees on screen,
+           so classify it from the plain spelling rather than the vocalized one. */
+        if (found === "i" && plain.charAt(1) === "י") return "y";
+        return found;
+      }
+
+      /* No vowel on the first letter means a following vav is carrying it. */
+      if (voiced.charAt(i) === VAV) {
+        if (voiced.charAt(i + 1) === HOLAM) return "o";
+        if (voiced.charAt(i + 1) === DAGESH) return "u";
+      }
+      return "";
     }
 
     /* Vocalized (menukad) spellings, used ONLY for speech. Hebrew text-to-speech has to
@@ -967,7 +1010,9 @@
       "שביט": "שָׁבִיט", "חליל": "חָלִיל", "גביע": "גָּבִיעַ", "לשון": "לָשׁוֹן",
       "פה": "פֶּה", "מוח": "מֹחַ", "תינוק": "תִּינוֹק", "ילדה": "יַלְדָּה",
       "סבתא": "סָבְתָא", "סבא": "סַבָּא", "שוטר": "שׁוֹטֵר", "קוסם": "קוֹסֵם",
-      "מלך": "מֶלֶךְ", "דרך": "דֶּרֶךְ", "חוף": "חוֹף", "זהב": "זָהָב"
+      "מלך": "מֶלֶךְ", "דרך": "דֶּרֶךְ", "חוף": "חוֹף", "זהב": "זָהָב",
+      "סופה": "סוּפָה", "מוזיקה": "מוּזִיקָה", "חומוס": "חוּמוּס", "שוק": "שׁוּק",
+      "טוש": "טוּשׁ", "לוח": "לוּחַ", "בובה": "בֻּבָּה", "קומקום": "קוּמְקוּם"
     };
 
     var NIKUD = {};
@@ -1046,6 +1091,21 @@
       {
         mode: "nikud", label: "שלב 12", prompt: "איזה ניקוד יש באות הראשונה?",
         groups: [{ chars: "tqy", weight: 1 }]
+      },
+
+      {
+        mode: "sound", label: "שלב 13", prompt: "באיזה צליל מתחילה המילה?",
+        groups: [{ chars: "OE", weight: 1 }]
+      },
+
+      {
+        mode: "sound", label: "שלב 14", prompt: "באיזה צליל מתחילה המילה?",
+        groups: [{ chars: "OU", weight: 1 }]
+      },
+
+      {
+        mode: "sound", label: "שלב 15", prompt: "באיזה צליל מתחילה המילה?",
+        groups: [{ chars: "AEIOU", weight: 1 }], options: 3
       }
     ];
 
@@ -1056,9 +1116,13 @@
 
     function lastChar(w) { return w.charAt(w.length - 1); }
 
+    /* "nikud" asks for the exact mark, "sound" asks for the vowel sound. */
+    function isVowelMode(mode) { return mode === "nikud" || mode === "sound"; }
+
     function keyOf(entry, mode) {
       if (mode === "first") return entry.letter;
       if (mode === "last") return lastChar(entry.word);
+      if (mode === "sound") return SOUND_OF[NIKUD[entry.word]] || "";
       return NIKUD[entry.word] || "";
     }
 
@@ -1140,8 +1204,8 @@
     }
 
     function pickKey(group) {
-      /* Vowel levels weight every choice equally, so no nikud mark dominates. */
-      if (LEVELS[level].mode === "nikud") return pick(group.keys);
+      /* Vowel levels weight every choice equally, so no answer dominates. */
+      if (isVowelMode(LEVELS[level].mode)) return pick(group.keys);
 
       var total = 0, i;
       for (i = 0; i < group.keys.length; i++) {
@@ -1312,7 +1376,17 @@
     /* Distractors come from the same group as the answer, so level 4 pits sofit forms
        against other sofit forms rather than against easy plain letters. */
     function buildChoices(correct, group) {
-      if (LEVELS[level].mode === "nikud") return shuffle(group.keys.slice());
+      if (isVowelMode(LEVELS[level].mode)) {
+        var all = group.keys.slice();
+        var cap = LEVELS[level].options || all.length;
+        if (cap >= all.length) return shuffle(all);
+
+        /* Keep the answer and fill the rest with distractors from the same group. */
+        var rest = [];
+        for (var r = 0; r < all.length; r++) if (all[r] !== correct) rest.push(all[r]);
+        shuffle(rest);
+        return shuffle([correct].concat(rest.slice(0, cap - 1)));
+      }
 
       var bank = group.keys.slice();
       if (bank.length < 3) {
@@ -1336,23 +1410,43 @@
     }
 
     function isNikudLevel() { return LEVELS[level].mode === "nikud"; }
+    function isSoundLevel() { return LEVELS[level].mode === "sound"; }
 
-    /* The nikud levels show the word's own first letter carrying each vowel. */
+    /* The vowel levels show the word's own first letter carrying each option.
+       The sound levels use one canonical mark per sound, so the shape of the
+       mark never hints at which button is the right one. */
     function faceOf(value) {
+      var first = current.word.charAt(0);
+
+      if (isSoundLevel()) {
+        if (value === "O") return first + VAV + HOLAM;
+        if (value === "U") return first + VAV + DAGESH;
+        return first + SOUND_MARK[value];
+      }
+
       if (!isNikudLevel()) return value;
-      var face = current.word.charAt(0) + MARK[value];
+
+      var face = first + MARK[value];
       if (value === "y") face += "\u05d9";   /* chirik male carries its yud */
       return face;
     }
 
     function nameOf(value) {
+      if (isSoundLevel()) return SOUND_NAMES[value];
       if (isNikudLevel()) return NIKUD_NAMES[value];
       return LETTER_NAMES[value] || "";
     }
 
     function revealText() {
-      if (!isNikudLevel()) return current.word;
-      return current.word.charAt(0) + MARK[NIKUD[current.word]] + current.word.slice(1);
+      if (!isNikudLevel() && !isSoundLevel()) return current.word;
+
+      var w = current.word;
+      var cls = NIKUD[w];
+      /* A holam male or shuruk belongs on the vav, not on the first letter. */
+      if ((cls === "o" || cls === "u") && w.charAt(1) === VAV) {
+        return w.charAt(0) + VAV + (cls === "u" ? DAGESH : HOLAM) + w.slice(2);
+      }
+      return w.charAt(0) + MARK[cls] + w.slice(1);
     }
 
     function bump(node) {
@@ -1485,7 +1579,7 @@
     var LETTER_NAME_MS = 1250;
 
     function sayLetter(value) {
-      if (isNikudLevel()) return 0;
+      if (isNikudLevel() || isSoundLevel()) return 0;
       speak(LETTER_SAY[value] || LETTER_NAMES[value] || value, 0.8);
       return LETTER_NAME_MS;
     }
