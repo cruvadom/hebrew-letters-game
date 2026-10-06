@@ -10,7 +10,7 @@ Open it and play.
 
 ## Playing
 
-Download `index.html` and double-click it. That's it.
+**Download `index.html` and double-click it. That's it.**
 
 Each round shows an emoji picture, speaks the Hebrew word, and offers big letter
 buttons. A correct answer on the first try earns a star and advances the level
