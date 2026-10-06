@@ -88,20 +88,33 @@ function fire(type) {
   for (var i = 0; i < ls.length; i++) ls[i]();
 }
 
-/* Timers are recorded, never auto-run. Tests flush them when they want to. */
+/* Timers run on a fake clock, so tests can assert what is heard and when. */
+var NOW = 0;
 var TIMERS = [];
-function setTimeout(fn, ms) { TIMERS.push({ fn: fn, ms: ms || 0 }); return TIMERS.length; }
+function setTimeout(fn, ms) { TIMERS.push({ fn: fn, at: NOW + (ms || 0) }); return TIMERS.length; }
 function clearTimeout(id) { if (id && TIMERS[id - 1]) TIMERS[id - 1] = null; }
-function flushTimers() {
-  var list = TIMERS;
-  TIMERS = [];
-  list.sort(function (a, b) { return (a ? a.ms : 0) - (b ? b.ms : 0); });
-  for (var i = 0; i < list.length; i++) if (list[i]) list[i].fn();
+function runUntil(limit) {
+  for (;;) {
+    var best = -1;
+    for (var i = 0; i < TIMERS.length; i++) {
+      if (!TIMERS[i] || TIMERS[i].at > limit) continue;
+      if (best < 0 || TIMERS[i].at < TIMERS[best].at) best = i;
+    }
+    if (best < 0) break;
+    var t = TIMERS[best];
+    TIMERS[best] = null;
+    NOW = t.at;
+    t.fn();
+  }
+  NOW = limit;
 }
-function dropTimers() { TIMERS = []; }
+function flushTimers() { runUntil(NOW + 100000); }
+/* Null entries rather than emptying, so outstanding timer ids stay valid. */
+function dropTimers() { for (var i = 0; i < TIMERS.length; i++) TIMERS[i] = null; }
 
 /* Fake speech engine that records the exact order of cancel/speak calls. */
 var SPOKEN = [];
+var SPOKEN_AT = [];
 var SPEECH_LOG = [];
 function SpeechSynthesisUtterance(t) { this.text = t; }
 var window = {
@@ -111,7 +124,7 @@ var window = {
     getVoices: function () { return [{ name: "Carmit", lang: "he-IL" }]; },
     cancel: function () { SPEECH_LOG.push("cancel"); },
     resume: function () { this.resumed++; SPEECH_LOG.push("resume"); },
-    speak: function (u) { SPEECH_LOG.push("speak"); SPOKEN.push(u.text); }
+    speak: function (u) { SPEECH_LOG.push("speak"); SPOKEN.push(u.text); SPOKEN_AT.push(NOW); }
   }
 };
 
@@ -438,6 +451,71 @@ picks[0].click();                   // back to level 1
 for (var s = 0; s < TARGET; s++) { clickCorrect(); if (solved !== 0) nextQuestion(); }
 check(level === 2, "after a jump, finishing the level should still advance; got " + level);
 print("after jumping, completing a level advances as usual");
+
+// -------------------------------------------------- letter name on press
+print("");
+print("=== letter names spoken on press ===");
+dropTimers();
+
+// every letter that can appear as an option needs a spoken name
+var allKeys = {};
+for (var L = 1; L <= MAX_LEVEL; L++) {
+  if (LEVELS[L].mode === "nikud") continue;
+  for (var gg = 0; gg < LEVELS[L].groups.length; gg++) {
+    var gk = LEVELS[L].groups[gg].keys;
+    for (var ki = 0; ki < gk.length; ki++) allKeys[gk[ki]] = true;
+  }
+}
+var missingName = [];
+for (var letter in allKeys) if (!LETTER_SAY[letter]) missingName.push(letter);
+check(missingName.length === 0, "no spoken name for: " + missingName.join(" "));
+print(keysOf(allKeys).length + " letters can appear, all have a spoken name");
+
+// pressing a wrong option speaks that letter's name
+level = 1; solved = 0; dropTimers(); SPOKEN = [];
+nextQuestion();
+dropTimers(); SPOKEN = [];
+var wrongBtn = null, wrongVal = null, oc = opts();
+for (var w2 = 0; w2 < oc.length; w2++) {
+  if (oc[w2].attrs["data-value"] !== currentAnswer) { wrongBtn = oc[w2]; wrongVal = oc[w2].attrs["data-value"]; break; }
+}
+wrongBtn.click();
+flushTimers();
+check(SPOKEN.length === 1 && SPOKEN[0] === LETTER_SAY[wrongVal],
+  "pressing " + wrongVal + " should say '" + LETTER_SAY[wrongVal] + "', got " + SPOKEN.join("/"));
+print("wrong press says the letter name: '" + SPOKEN[0] + "'");
+
+// pressing the right option says the letter name first, then the word
+level = 1; solved = 0; dropTimers(); SPOKEN = []; SPOKEN_AT = [];
+nextQuestion();
+dropTimers(); SPOKEN = []; SPOKEN_AT = [];
+var rightVal = currentAnswer, theWord = SAY[current.word] || current.word;
+var t0 = NOW;
+clickCorrect();
+runUntil(t0 + 1000);          // early: only the letter name should have played
+check(SPOKEN.length === 1 && SPOKEN[0] === LETTER_SAY[rightVal],
+  "within 1s only the letter name should play, heard " + SPOKEN.join(" / "));
+runUntil(t0 + 2500);          // later: the word follows
+check(SPOKEN.length >= 2, "the word should follow the letter name, heard " + SPOKEN.join(" / "));
+check(SPOKEN[1] === theWord, "second utterance should be the word, got '" + SPOKEN[1] + "'");
+var gap = SPOKEN_AT[1] - SPOKEN_AT[0];
+check(gap >= LETTER_NAME_MS,
+  "only " + gap + "ms between the letter name and the word, need >= " + LETTER_NAME_MS + "ms");
+print("correct press: '" + SPOKEN[0] + "' then '" + SPOKEN[1] + "' " + gap + "ms later");
+
+// the vowel levels stay silent on press
+for (var nl = 6; nl <= MAX_LEVEL; nl++) {
+  level = nl; solved = 0; dropTimers(); SPOKEN = [];
+  nextQuestion();
+  dropTimers(); SPOKEN = [];
+  var nc = opts();
+  for (var nb = 0; nb < nc.length; nb++) {
+    if (nc[nb].attrs["data-value"] !== currentAnswer) { nc[nb].click(); break; }
+  }
+  flushTimers();
+  check(SPOKEN.length === 0, "level " + nl + " should not speak a letter name, said " + SPOKEN.join("/"));
+}
+print("vowel levels 6-" + MAX_LEVEL + " stay silent when an option is pressed");
 
 print("");
 print(failures === 0 ? "ALL CHECKS PASSED" : failures + " CHECK(S) FAILED");

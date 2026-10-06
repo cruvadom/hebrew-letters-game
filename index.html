@@ -553,7 +553,7 @@
       /* How many levels to play before the trophy. Set it to 6, for example,
          and levels 7-12 are skipped: finishing level 6 awards the trophy and
          starts over at level 1. Maximum is 12. */
-      numberOfLevels: 8
+      numberOfLevels: 12
     };
     /* ==================================================================== */
 
@@ -843,6 +843,17 @@
       "ש": "שין", "ת": "תו",
       "ך": "כף סופית", "ם": "מם סופית", "ן": "נון סופית",
       "ף": "פא סופית", "ץ": "צדי סופית"
+    };
+
+    /* Vocalized letter names, used only for speech (same reason as SAY). */
+    var LETTER_SAY = {
+      "א": "אָלֶף", "ב": "בֵּית", "ג": "גִּימֶל", "ד": "דָּלֶת", "ה": "הֵא",
+      "ו": "וָו", "ז": "זַיִן", "ח": "חֵית", "ט": "טֵית", "י": "יוֹד",
+      "כ": "כַּף", "ל": "לָמֶד", "מ": "מֵם", "נ": "נוּן", "ס": "סָמֶךְ",
+      "ע": "עַיִן", "פ": "פֵּא", "צ": "צָדִי", "ק": "קוֹף", "ר": "רֵישׁ",
+      "ש": "שִׁין", "ת": "תָּו",
+      "ך": "כַּף סוֹפִית", "ם": "מֵם סוֹפִית", "ן": "נוּן סוֹפִית",
+      "ף": "פֵּא סוֹפִית", "ץ": "צָדִי סוֹפִית"
     };
 
     /* ---------- vowel (nikud) classes ----------
@@ -1469,8 +1480,20 @@
       return "סיימת את כל השלבים! 🏆";
     }
 
+    /* On the letter levels, pressing an option reads that letter's name aloud.
+       The follow-up speech is delayed so the name is never cut off mid-word. */
+    var LETTER_NAME_MS = 1250;
+
+    function sayLetter(value) {
+      if (isNikudLevel()) return 0;
+      speak(LETTER_SAY[value] || LETTER_NAMES[value] || value, 0.8);
+      return LETTER_NAME_MS;
+    }
+
     function answer(btn, value, correct) {
       if (locked || btn.disabled) return;
+
+      var spoken = sayLetter(value);
 
       if (value !== correct) {
         firstTry = false;
@@ -1508,15 +1531,15 @@
         tone(523, 0.35, 0.2, "triangle", 0.28);
         tone(659, 0.5, 0.2, "triangle", 0.28);
         tone(784, 0.65, 0.45, "triangle", 0.3);
-        setTimeout(function () { speak(promoted, 0.95); }, 700);
-        setTimeout(nextQuestion, 3600);
+        setTimeout(function () { speak(promoted, 0.95); }, spoken + 700);
+        setTimeout(nextQuestion, spoken + 3600);
         return;
       }
 
       el.banner.textContent = firstTry ? pick(CHEERS) : "יפה, מצאת!";
       if (firstTry) confetti(18);
-      setTimeout(function () { sayWord(0.8); }, 450);
-      setTimeout(nextQuestion, 2100);
+      setTimeout(function () { sayWord(0.8); }, spoken + 450);
+      setTimeout(nextQuestion, spoken + 2100);
     }
 
     el.say.addEventListener("click", function () {
