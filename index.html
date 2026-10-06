@@ -1,0 +1,1555 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>אות ראשונה — משחק עברית</title>
+  <style>
+    :root {
+      --deep: #12314a;
+      --mid: #1f6f7a;
+      --shore: #37b3a0;
+      --cream: #fff6e6;
+      --cream2: #ffeccd;
+      --ink: #14293d;
+      --sun: #ffc93c;
+      --sun-dk: #e8a600;
+      --good: #2f9e44;
+      --good-l: #b7ecc0;
+      --bad: #e03131;
+      --bad-l: #ffd3d3;
+      --shadow: 0 8px 0 rgba(0, 0, 0, .18);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      font-family: "Rubik", "Assistant", "Noto Sans Hebrew", "Arial Hebrew", "Segoe UI", Arial, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 600px at 80% -10%, rgba(255, 201, 60, .35), transparent 60%),
+        radial-gradient(900px 500px at 10% 110%, rgba(55, 179, 160, .45), transparent 60%),
+        linear-gradient(165deg, var(--deep) 0%, var(--mid) 58%, var(--shore) 100%);
+      background-attachment: fixed;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 14px 14px 26px;
+      overflow-x: hidden;
+    }
+
+    /* soft dotted texture over the background */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(rgba(255, 255, 255, .10) 1.5px, transparent 1.6px);
+      background-size: 28px 28px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 720px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: 30px;
+      margin: 0;
+      color: var(--cream);
+      letter-spacing: 0;
+      text-shadow: 0 3px 0 rgba(0, 0, 0, .25);
+    }
+
+    .hud {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+    }
+
+    .pill {
+      background: rgba(255, 246, 230, .16);
+      border: 2px solid rgba(255, 246, 230, .35);
+      border-radius: 999px;
+      padding: 7px 14px;
+      color: var(--cream);
+      font-size: 20px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .pill.level {
+      background: var(--sun);
+      border-color: var(--sun-dk);
+      color: var(--ink);
+    }
+
+    .pill.cycles {
+      background: rgba(255, 201, 60, .28);
+      border-color: var(--sun);
+    }
+
+    .pill.hidden {
+      display: none;
+    }
+
+    .pill.bump {
+      animation: bump .45s cubic-bezier(.2, 1.6, .4, 1);
+    }
+
+    /* The level pill doubles as the button that opens the level picker. */
+    button.pill {
+      font-family: inherit;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    button.pill::after {
+      content: " ▾";
+      font-size: 15px;
+      opacity: .75;
+    }
+
+    .picker {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 0 0 12px;
+      padding: 12px;
+      border-radius: 20px;
+      background: rgba(18, 49, 74, .45);
+      border: 2px solid rgba(255, 246, 230, .25);
+    }
+
+    .picker.hidden {
+      display: none;
+    }
+
+    .picker .lvl {
+      font-family: inherit;
+      font-size: 19px;
+      font-weight: 700;
+      min-width: 46px;
+      padding: 9px 10px;
+      border-radius: 14px;
+      border: 2px solid rgba(255, 246, 230, .35);
+      background: rgba(255, 246, 230, .12);
+      color: var(--cream);
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    .picker .lvl.on {
+      background: var(--sun);
+      border-color: var(--sun-dk);
+      color: var(--ink);
+    }
+
+    .picker .lvl .what {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      opacity: .8;
+      margin-top: 2px;
+    }
+
+    .streakbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 12px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(18, 49, 74, .35);
+      border: 2px solid rgba(255, 246, 230, .2);
+    }
+
+    .streaktext {
+      color: var(--cream);
+      font-size: 17px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .pips {
+      display: flex;
+      gap: 6px;
+      flex: 1;
+      justify-content: flex-start;
+    }
+
+    .pip {
+      width: 100%;
+      max-width: 26px;
+      height: 14px;
+      border-radius: 999px;
+      background: rgba(255, 246, 230, .18);
+      border: 2px solid rgba(255, 246, 230, .28);
+      transition: background .2s ease, transform .2s ease, border-color .2s ease;
+    }
+
+    .pip.on {
+      background: var(--sun);
+      border-color: var(--sun-dk);
+      transform: scale(1.12);
+    }
+
+    .card {
+      background: linear-gradient(180deg, var(--cream) 0%, var(--cream2) 100%);
+      border-radius: 28px;
+      padding: 18px 18px 22px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, .28);
+      text-align: center;
+      animation: pop .35s cubic-bezier(.2, 1.4, .5, 1) both;
+    }
+
+    .prompt {
+      font-size: 20px;
+      font-weight: 700;
+      color: #5a6c7d;
+      margin: 2px 0 6px;
+    }
+
+    .picture {
+      font-size: clamp(110px, 34vw, 170px);
+      line-height: 1.1;
+      user-select: none;
+      animation: float 3.2s ease-in-out infinite;
+      font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+    }
+
+    .word {
+      height: 46px;
+      font-size: 38px;
+      font-weight: 800;
+      color: var(--good);
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity .25s ease, transform .25s ease;
+    }
+
+    .word.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .sayrow {
+      margin-top: 6px;
+    }
+
+    .say {
+      border: 3px solid var(--ink);
+      background: var(--sun);
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 9px 22px;
+      font-size: 20px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      box-shadow: 0 5px 0 var(--sun-dk);
+      transition: transform .08s ease, box-shadow .08s ease;
+    }
+
+    .say:active:not(:disabled) {
+      transform: translateY(4px);
+      box-shadow: 0 1px 0 var(--sun-dk);
+    }
+
+    .say:disabled {
+      background: #e6ded1;
+      border-color: #b3a894;
+      color: #7b7264;
+      box-shadow: 0 5px 0 #c9bfae;
+      cursor: default;
+      font-size: 17px;
+    }
+
+    .options {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-top: 20px;
+    }
+
+    .options.two {
+      grid-template-columns: repeat(2, 1fr);
+      max-width: 460px;
+      margin-inline: auto;
+    }
+
+    .opt {
+      font-family: inherit;
+      font-size: clamp(56px, 16vw, 82px);
+      font-weight: 800;
+      line-height: 1;
+      padding: 24px 6px 26px;
+      border-radius: 24px;
+      border: 4px solid var(--ink);
+      background: var(--cream);
+      color: var(--ink);
+      cursor: pointer;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      box-shadow: var(--shadow);
+      transition: transform .08s ease, box-shadow .08s ease, background .18s ease, border-color .18s ease;
+    }
+
+    .opt:active:not(:disabled) {
+      transform: translateY(6px);
+      box-shadow: 0 2px 0 rgba(0, 0, 0, .18);
+    }
+
+    .opt:disabled {
+      cursor: default;
+    }
+
+    .opt.correct {
+      background: var(--good-l);
+      border-color: var(--good);
+      color: var(--good);
+    }
+
+    .opt.wrong {
+      background: var(--bad-l);
+      border-color: var(--bad);
+      color: var(--bad);
+      animation: shake .4s;
+    }
+
+    .opt.faded {
+      opacity: .38;
+    }
+
+    .banner {
+      margin-top: 16px;
+      min-height: 34px;
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--cream);
+      text-shadow: 0 2px 0 rgba(0, 0, 0, .28);
+    }
+
+    footer {
+      margin-top: 14px;
+      text-align: center;
+      color: rgba(255, 246, 230, .65);
+      font-size: 14px;
+    }
+
+    footer button {
+      font-family: inherit;
+      font-size: 14px;
+      color: rgba(255, 246, 230, .9);
+      background: transparent;
+      border: 2px solid rgba(255, 246, 230, .4);
+      border-radius: 999px;
+      padding: 5px 14px;
+      cursor: pointer;
+    }
+
+    .confetti {
+      position: fixed;
+      top: -20px;
+      width: 12px;
+      height: 16px;
+      border-radius: 3px;
+      z-index: 50;
+      pointer-events: none;
+      animation: fall linear forwards;
+    }
+
+    .banner.big {
+      font-size: 32px;
+      color: var(--sun);
+    }
+
+    @keyframes pop {
+      from {
+        transform: scale(.9);
+        opacity: 0;
+      }
+
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    @keyframes bump {
+      0% {
+        transform: scale(1);
+      }
+
+      45% {
+        transform: scale(1.25) rotate(-3deg);
+      }
+
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    @keyframes float {
+
+      0%,
+      100% {
+        transform: translateY(0) rotate(-1deg);
+      }
+
+      50% {
+        transform: translateY(-12px) rotate(2deg);
+      }
+    }
+
+    @keyframes shake {
+
+      0%,
+      100% {
+        transform: translateX(0);
+      }
+
+      20% {
+        transform: translateX(-9px);
+      }
+
+      40% {
+        transform: translateX(9px);
+      }
+
+      60% {
+        transform: translateX(-6px);
+      }
+
+      80% {
+        transform: translateX(6px);
+      }
+    }
+
+    @keyframes fall {
+      to {
+        transform: translateY(105vh) rotate(720deg);
+        opacity: .9;
+      }
+    }
+
+    @media (max-width: 420px) {
+      h1 {
+        font-size: 22px;
+      }
+
+      .pill {
+        font-size: 16px;
+        padding: 5px 11px;
+      }
+
+      .streaktext {
+        font-size: 14px;
+      }
+
+      .pip {
+        height: 11px;
+      }
+
+      .options {
+        gap: 9px;
+      }
+
+      .opt {
+        border-radius: 18px;
+        padding: 16px 2px 18px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+
+      .picture,
+      .card,
+      .opt.wrong {
+        animation: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <h1>משחק האותיות</h1>
+      <div class="hud">
+        <button class="pill level" id="levelPill" type="button" aria-expanded="false">שלב 1</button>
+        <span class="pill" id="starsPill">⭐ 0</span>
+        <span class="pill cycles hidden" id="cyclesPill">🏆 0</span>
+      </div>
+    </header>
+
+    <div class="picker hidden" id="levelPicker"></div>
+
+    <div class="streakbar">
+      <span class="streaktext" id="progressText">✅ 0 / 10</span>
+      <div class="pips" id="pips"></div>
+    </div>
+
+    <div class="card">
+      <div class="prompt" id="prompt">מה רואים בתמונה?</div>
+      <div class="picture" id="picture">🐸</div>
+      <div class="word" id="word"></div>
+      <div class="sayrow">
+        <button class="say" id="say" type="button">🔊 תגיד לי שוב</button>
+      </div>
+    </div>
+
+    <div class="options" id="options"></div>
+
+    <div class="banner" id="banner"></div>
+
+    <footer>
+      <button id="reset" type="button">להתחיל מחדש</button>
+    </footer>
+  </div>
+
+  <script>
+    "use strict";
+
+    /* ======================================================================
+       SETTINGS - change these two numbers to tune the game.
+       ====================================================================== */
+    var CONFIG = {
+      /* How many correct answers are needed to clear a level. */
+      correctAnswersPerLevel: 10,
+
+      /* How many levels to play before the trophy. Set it to 6, for example,
+         and levels 7-12 are skipped: finishing level 6 awards the trophy and
+         starts over at level 1. Maximum is 12. */
+      numberOfLevels: 8
+    };
+    /* ==================================================================== */
+
+
+    /* Each entry: emoji picture, the Hebrew word, and its first letter. */
+    var WORDS = [
+      { pic: "🐸", word: "צפרדע", letter: "צ" },
+      { pic: "🪑", word: "כיסא", letter: "כ" },
+      { pic: "🌳", word: "עץ", letter: "ע" },
+      { pic: "🏠", word: "בית", letter: "ב" },
+      { pic: "🐕", word: "כלב", letter: "כ" },
+      { pic: "🐈", word: "חתול", letter: "ח" },
+      { pic: "🌞", word: "שמש", letter: "ש" },
+      { pic: "🌙", word: "ירח", letter: "י" },
+      { pic: "🚗", word: "מכונית", letter: "מ" },
+      { pic: "🍎", word: "תפוח", letter: "ת" },
+      { pic: "🍌", word: "בננה", letter: "ב" },
+      { pic: "🐟", word: "דג", letter: "ד" },
+      { pic: "🦁", word: "אריה", letter: "א" },
+      { pic: "🐘", word: "פיל", letter: "פ" },
+      { pic: "🐄", word: "פרה", letter: "פ" },
+      { pic: "🌺", word: "פרח", letter: "פ" },
+      { pic: "📚", word: "ספר", letter: "ס" },
+      { pic: "🧦", word: "גרב", letter: "ג" },
+      { pic: "👟", word: "נעל", letter: "נ" },
+      { pic: "🎈", word: "בלון", letter: "ב" },
+      { pic: "🎂", word: "עוגה", letter: "ע" },
+      { pic: "🥛", word: "חלב", letter: "ח" },
+      { pic: "🥚", word: "ביצה", letter: "ב" },
+      { pic: "🧀", word: "גבינה", letter: "ג" },
+      { pic: "🍕", word: "פיצה", letter: "פ" },
+      { pic: "⚽", word: "כדור", letter: "כ" },
+      { pic: "🚲", word: "אופניים", letter: "א" },
+      { pic: "✈️", word: "מטוס", letter: "מ" },
+      { pic: "🚢", word: "ספינה", letter: "ס" },
+      { pic: "🚂", word: "רכבת", letter: "ר" },
+      { pic: "🐦", word: "ציפור", letter: "צ" },
+      { pic: "🐝", word: "דבורה", letter: "ד" },
+      { pic: "🦋", word: "פרפר", letter: "פ" },
+      { pic: "🕷️", word: "עכביש", letter: "ע" },
+      { pic: "🐍", word: "נחש", letter: "נ" },
+      { pic: "🐢", word: "צב", letter: "צ" },
+      { pic: "🐴", word: "סוס", letter: "ס" },
+      { pic: "🐔", word: "תרנגולת", letter: "ת" },
+      { pic: "🦆", word: "ברווז", letter: "ב" },
+      { pic: "🌈", word: "קשת", letter: "ק" },
+      { pic: "⭐", word: "כוכב", letter: "כ" },
+      { pic: "☁️", word: "ענן", letter: "ע" },
+      { pic: "🌧️", word: "גשם", letter: "ג" },
+      { pic: "❄️", word: "שלג", letter: "ש" },
+      { pic: "🔥", word: "אש", letter: "א" },
+      { pic: "💧", word: "מים", letter: "מ" },
+      { pic: "🍞", word: "לחם", letter: "ל" },
+      { pic: "🧢", word: "כובע", letter: "כ" },
+      { pic: "👕", word: "חולצה", letter: "ח" },
+      { pic: "🪟", word: "חלון", letter: "ח" },
+      { pic: "🚪", word: "דלת", letter: "ד" },
+      { pic: "🛏️", word: "מיטה", letter: "מ" },
+      { pic: "🍫", word: "שוקולד", letter: "ש" },
+      { pic: "🍦", word: "גלידה", letter: "ג" },
+      { pic: "🥕", word: "גזר", letter: "ג" },
+      { pic: "🍅", word: "עגבנייה", letter: "ע" },
+      { pic: "🌽", word: "תירס", letter: "ת" },
+      { pic: "🍇", word: "ענבים", letter: "ע" },
+      { pic: "🍉", word: "אבטיח", letter: "א" },
+      { pic: "🍊", word: "תפוז", letter: "ת" },
+      { pic: "🍋", word: "לימון", letter: "ל" },
+      { pic: "🐒", word: "קוף", letter: "ק" },
+      { pic: "🐭", word: "עכבר", letter: "ע" },
+      { pic: "🐰", word: "ארנב", letter: "א" },
+      { pic: "🦊", word: "שועל", letter: "ש" },
+      { pic: "🐻", word: "דוב", letter: "ד" },
+      { pic: "🐑", word: "כבשה", letter: "כ" },
+      { pic: "🐐", word: "עז", letter: "ע" },
+      { pic: "🐪", word: "גמל", letter: "ג" },
+      { pic: "🎸", word: "גיטרה", letter: "ג" },
+      { pic: "🥁", word: "תוף", letter: "ת" },
+      { pic: "🎹", word: "פסנתר", letter: "פ" },
+      { pic: "🎻", word: "כינור", letter: "כ" },
+      { pic: "📞", word: "טלפון", letter: "ט" },
+      { pic: "🕰️", word: "שעון", letter: "ש" },
+      { pic: "🔑", word: "מפתח", letter: "מ" },
+      { pic: "✂️", word: "מספריים", letter: "מ" },
+      { pic: "🪣", word: "דלי", letter: "ד" },
+      { pic: "🧸", word: "דובי", letter: "ד" },
+      { pic: "🎁", word: "מתנה", letter: "מ" },
+      { pic: "👑", word: "כתר", letter: "כ" },
+      { pic: "💍", word: "טבעת", letter: "ט" },
+      { pic: "🕯️", word: "נר", letter: "נ" },
+      { pic: "🪞", word: "מראה", letter: "מ" },
+      { pic: "🚀", word: "חללית", letter: "ח" },
+      { pic: "🍄", word: "פטרייה", letter: "פ" },
+      { pic: "🧅", word: "בצל", letter: "ב" },
+      { pic: "🦀", word: "סרטן", letter: "ס" },
+      { pic: "🐙", word: "תמנון", letter: "ת" },
+      { pic: "🦈", word: "כריש", letter: "כ" },
+      { pic: "🐳", word: "לווייתן", letter: "ל" },
+      { pic: "🦉", word: "ינשוף", letter: "י" },
+      { pic: "🐧", word: "פינגווין", letter: "פ" },
+      { pic: "✏️", word: "עיפרון", letter: "ע" },
+      { pic: "🎒", word: "תיק", letter: "ת" },
+      { pic: "🪁", word: "עפיפון", letter: "ע" },
+      { pic: "🥄", word: "כף", letter: "כ" },
+      { pic: "🍴", word: "מזלג", letter: "מ" },
+      { pic: "🔪", word: "סכין", letter: "ס" },
+      { pic: "🍽️", word: "צלחת", letter: "צ" },
+      { pic: "🧊", word: "קרח", letter: "ק" },
+      { pic: "🌵", word: "קקטוס", letter: "ק" },
+      { pic: "🌴", word: "דקל", letter: "ד" },
+      { pic: "🪨", word: "אבן", letter: "א" },
+      { pic: "⛰️", word: "הר", letter: "ה" },
+      { pic: "🌊", word: "גל", letter: "ג" },
+      { pic: "🚌", word: "אוטובוס", letter: "א" },
+      { pic: "🚁", word: "מסוק", letter: "מ" },
+      { pic: "🧤", word: "כפפות", letter: "כ" },
+      { pic: "🧣", word: "צעיף", letter: "צ" },
+      { pic: "☂️", word: "מטרייה", letter: "מ" },
+      { pic: "🪜", word: "סולם", letter: "ס" },
+      { pic: "🔨", word: "פטיש", letter: "פ" },
+      { pic: "🦷", word: "שן", letter: "ש" },
+      { pic: "👁️", word: "עין", letter: "ע" },
+      { pic: "👂", word: "אוזן", letter: "א" },
+      { pic: "✋", word: "יד", letter: "י" },
+      { pic: "❤️", word: "לב", letter: "ל" },
+      { pic: "🪶", word: "נוצה", letter: "נ" },
+      { pic: "🌰", word: "אגוז", letter: "א" },
+      { pic: "🍯", word: "דבש", letter: "ד" },
+      { pic: "🍚", word: "אורז", letter: "א" },
+      { pic: "🛁", word: "אמבטיה", letter: "א" },
+      { pic: "🧼", word: "סבון", letter: "ס" },
+      { pic: "🛋️", word: "ספה", letter: "ס" },
+      { pic: "💡", word: "מנורה", letter: "מ" },
+      { pic: "📷", word: "מצלמה", letter: "מ" },
+      { pic: "🖥️", word: "מחשב", letter: "מ" },
+      { pic: "🎲", word: "קובייה", letter: "ק" },
+      { pic: "🚦", word: "רמזור", letter: "ר" },
+      { pic: "⚓", word: "עוגן", letter: "ע" },
+      { pic: "🔔", word: "פעמון", letter: "פ" },
+      { pic: "👓", word: "משקפיים", letter: "מ" },
+      { pic: "👗", word: "שמלה", letter: "ש" },
+      { pic: "🧥", word: "מעיל", letter: "מ" },
+      { pic: "🐜", word: "נמלה", letter: "נ" },
+      { pic: "🐛", word: "תולעת", letter: "ת" },
+      { pic: "🦂", word: "עקרב", letter: "ע" },
+      { pic: "🐊", word: "תנין", letter: "ת" },
+      { pic: "🦓", word: "זברה", letter: "ז" },
+      { pic: "🐺", word: "זאב", letter: "ז" },
+      { pic: "🦇", word: "עטלף", letter: "ע" },
+      { pic: "🐿️", word: "סנאי", letter: "ס" },
+      { pic: "🦔", word: "קיפוד", letter: "ק" },
+      { pic: "🦘", word: "קנגורו", letter: "ק" },
+      { pic: "🐆", word: "נמר", letter: "נ" },
+      { pic: "🏰", word: "טירה", letter: "ט" },
+      { pic: "🧲", word: "מגנט", letter: "מ" },
+      { pic: "⚡", word: "ברק", letter: "ב" },
+      { pic: "🕊️", word: "יונה", letter: "י" },
+      { pic: "🦜", word: "תוכי", letter: "ת" },
+      { pic: "🐣", word: "אפרוח", letter: "א" },
+      { pic: "🍒", word: "דובדבן", letter: "ד" },
+      { pic: "🍓", word: "תות", letter: "ת" },
+      { pic: "🍐", word: "אגס", letter: "א" },
+      { pic: "🫒", word: "זית", letter: "ז" },
+      { pic: "🌶️", word: "פלפל", letter: "פ" },
+      { pic: "🥒", word: "מלפפון", letter: "מ" },
+      { pic: "🍬", word: "סוכרייה", letter: "ס" },
+      { pic: "🐌", word: "חילזון", letter: "ח" },
+      { pic: "🌹", word: "ורד", letter: "ו" },
+      { pic: "🦶", word: "רגל", letter: "ר" },
+      { pic: "🤖", word: "רובוט", letter: "ר" },
+      { pic: "🪰", word: "זבוב", letter: "ז" },
+      { pic: "🚜", word: "טרקטור", letter: "ט" },
+      { pic: "🤡", word: "ליצן", letter: "ל" },
+      { pic: "🧒", word: "ילד", letter: "י" },
+      { pic: "🛞", word: "גלגל", letter: "ג" },
+      { pic: "🦒", word: "ג'ירפה", letter: "ג" },
+      { pic: "🐬", word: "דולפין", letter: "ד" },
+      { pic: "🐹", word: "אוגר", letter: "א" },
+      { pic: "🦩", word: "פלמינגו", letter: "פ" },
+      { pic: "🦚", word: "טווס", letter: "ט" },
+      { pic: "🦎", word: "לטאה", letter: "ל" },
+      { pic: "🦥", word: "עצלן", letter: "ע" },
+      { pic: "🐨", word: "קואלה", letter: "ק" },
+      { pic: "🐼", word: "פנדה", letter: "פ" },
+      { pic: "🦛", word: "היפופוטם", letter: "ה" },
+      { pic: "🦏", word: "קרנף", letter: "ק" },
+      { pic: "🦗", word: "חרגול", letter: "ח" },
+      { pic: "🐚", word: "צדף", letter: "צ" },
+      { pic: "🦴", word: "עצם", letter: "ע" },
+      { pic: "🍍", word: "אננס", letter: "א" },
+      { pic: "🥭", word: "מנגו", letter: "מ" },
+      { pic: "🍑", word: "אפרסק", letter: "א" },
+      { pic: "🥥", word: "קוקוס", letter: "ק" },
+      { pic: "🥦", word: "ברוקולי", letter: "ב" },
+      { pic: "🍠", word: "בטטה", letter: "ב" },
+      { pic: "🧇", word: "וופל", letter: "ו" },
+      { pic: "🍔", word: "המבורגר", letter: "ה" },
+      { pic: "🌭", word: "נקניקייה", letter: "נ" },
+      { pic: "🥪", word: "כריך", letter: "כ" },
+      { pic: "🥗", word: "סלט", letter: "ס" },
+      { pic: "🍲", word: "מרק", letter: "מ" },
+      { pic: "🍪", word: "עוגייה", letter: "ע" },
+      { pic: "🍩", word: "סופגנייה", letter: "ס" },
+      { pic: "🍿", word: "פופקורן", letter: "פ" },
+      { pic: "☕", word: "קפה", letter: "ק" },
+      { pic: "🍵", word: "תה", letter: "ת" },
+      { pic: "🧃", word: "מיץ", letter: "מ" },
+      { pic: "🍷", word: "יין", letter: "י" },
+      { pic: "🧈", word: "חמאה", letter: "ח" },
+      { pic: "🥩", word: "בשר", letter: "ב" },
+      { pic: "🥬", word: "חסה", letter: "ח" },
+      { pic: "🧄", word: "שום", letter: "ש" },
+      { pic: "🍈", word: "מלון", letter: "מ" },
+      { pic: "🪥", word: "מברשת", letter: "מ" },
+      { pic: "🧽", word: "ספוג", letter: "ס" },
+      { pic: "🧺", word: "סל", letter: "ס" },
+      { pic: "🪡", word: "מחט", letter: "מ" },
+      { pic: "🧶", word: "צמר", letter: "צ" },
+      { pic: "👛", word: "ארנק", letter: "א" },
+      { pic: "👔", word: "עניבה", letter: "ע" },
+      { pic: "🥾", word: "מגף", letter: "מ" },
+      { pic: "🧳", word: "מזוודה", letter: "מ" },
+      { pic: "💎", word: "יהלום", letter: "י" },
+      { pic: "🔦", word: "פנס", letter: "פ" },
+      { pic: "🔌", word: "תקע", letter: "ת" },
+      { pic: "💰", word: "כסף", letter: "כ" },
+      { pic: "🛒", word: "עגלה", letter: "ע" },
+      { pic: "📦", word: "קופסה", letter: "ק" },
+      { pic: "✉️", word: "מכתב", letter: "מ" },
+      { pic: "🔒", word: "מנעול", letter: "מ" },
+      { pic: "🧱", word: "לבנה", letter: "ל" },
+      { pic: "🔩", word: "בורג", letter: "ב" },
+      { pic: "🧰", word: "ארגז", letter: "א" },
+      { pic: "🚑", word: "אמבולנס", letter: "א" },
+      { pic: "🚕", word: "מונית", letter: "מ" },
+      { pic: "🚚", word: "משאית", letter: "מ" },
+      { pic: "🏍️", word: "אופנוע", letter: "א" },
+      { pic: "🛶", word: "סירה", letter: "ס" },
+      { pic: "🗼", word: "מגדל", letter: "מ" },
+      { pic: "🏝️", word: "אי", letter: "א" },
+      { pic: "🏜️", word: "מדבר", letter: "מ" },
+      { pic: "🏕️", word: "אוהל", letter: "א" },
+      { pic: "🌉", word: "גשר", letter: "ג" },
+      { pic: "🗺️", word: "מפה", letter: "מ" },
+      { pic: "🥅", word: "שער", letter: "ש" },
+      { pic: "🎣", word: "חכה", letter: "ח" },
+      { pic: "🪝", word: "וו", letter: "ו" },
+      { pic: "🧵", word: "חוט", letter: "ח" },
+      { pic: "🪢", word: "קשר", letter: "ק" },
+      { pic: "🎺", word: "חצוצרה", letter: "ח" },
+      { pic: "🎧", word: "אוזניות", letter: "א" },
+      { pic: "📻", word: "רדיו", letter: "ר" },
+      { pic: "📺", word: "טלוויזיה", letter: "ט" },
+      { pic: "📰", word: "עיתון", letter: "ע" },
+      { pic: "🏳️", word: "דגל", letter: "ד" },
+      { pic: "🎪", word: "קרקס", letter: "ק" },
+      { pic: "🖼️", word: "תמונה", letter: "ת" },
+      { pic: "🚿", word: "מקלחת", letter: "מ" },
+      { pic: "🍃", word: "עלה", letter: "ע" },
+      { pic: "🌱", word: "זרע", letter: "ז" },
+      { pic: "💐", word: "זר", letter: "ז" },
+      { pic: "🪴", word: "עציץ", letter: "ע" },
+      { pic: "🌬️", word: "רוח", letter: "ר" },
+      { pic: "☄️", word: "שביט", letter: "ש" },
+      { pic: "🪈", word: "חליל", letter: "ח" },
+      { pic: "🏆", word: "גביע", letter: "ג" },
+      { pic: "👅", word: "לשון", letter: "ל" },
+      { pic: "👄", word: "פה", letter: "פ" },
+      { pic: "🧠", word: "מוח", letter: "מ" },
+      { pic: "👶", word: "תינוק", letter: "ת" },
+      { pic: "👧", word: "ילדה", letter: "י" },
+      { pic: "👵", word: "סבתא", letter: "ס" },
+      { pic: "👴", word: "סבא", letter: "ס" },
+      { pic: "👮", word: "שוטר", letter: "ש" },
+      { pic: "🧙", word: "קוסם", letter: "ק" },
+      { pic: "🤴", word: "מלך", letter: "מ" },
+      { pic: "🛣️", word: "דרך", letter: "ד" },
+      { pic: "🏖️", word: "חוף", letter: "ח" },
+      { pic: "🥇", word: "זהב", letter: "ז" }
+    ];
+
+    /* Letter names, used as a small hint under each big letter. */
+    var LETTER_NAMES = {
+      "א": "אלף", "ב": "בית", "ג": "גימל", "ד": "דלת", "ה": "הא",
+      "ו": "וו", "ז": "זין", "ח": "חית", "ט": "טית", "י": "יוד",
+      "כ": "כף", "ל": "למד", "מ": "מם", "נ": "נון", "ס": "סמך",
+      "ע": "עין", "פ": "פא", "צ": "צדי", "ק": "קוף", "ר": "ריש",
+      "ש": "שין", "ת": "תו",
+      "ך": "כף סופית", "ם": "מם סופית", "ן": "נון סופית",
+      "ף": "פא סופית", "ץ": "צדי סופית"
+    };
+
+    /* ---------- vowel (nikud) classes ----------
+       The first letter's vowel is derived automatically from the vocalized spelling in SAY,
+       so adding a word to WORDS + SAY is enough to make it available to the vowel levels.
+         a = patah      i = hirik       q = kamatz
+         y = hirik + yud (chirik male)  e = segol       t = tzere                        */
+    var MARK = {
+      a: "\u05B7",   /* פתח   */
+      i: "\u05B4",   /* חיריק */
+      q: "\u05B8",   /* קמץ   */
+      y: "\u05B4",   /* חיריק מלא - the yud is added by faceOf */
+      e: "\u05B6",   /* סגול  */
+      t: "\u05B5"    /* צירה  */
+    };
+
+    var NIKUD_NAMES = {
+      a: "פתח", i: "חיריק", q: "קמץ",
+      y: "חיריק מלא", e: "סגול", t: "צירה"
+    };
+
+    var VOWEL_OF_MARK = {
+      "\u05B7": "a", "\u05B4": "i", "\u05B8": "q", "\u05B6": "e", "\u05B5": "t"
+    };
+
+    /* Combining marks that may sit on a letter before its vowel (dagesh, shin/sin dot...). */
+    var COMBINING = "\u05B0\u05B1\u05B2\u05B3\u05B4\u05B5\u05B6\u05B7\u05B8\u05B9\u05BA" +
+      "\u05BB\u05BC\u05BD\u05BF\u05C1\u05C2\u05C7";
+
+    function firstVowelOf(plain, voiced) {
+      var found = "";
+      for (var i = 1; i < voiced.length && COMBINING.indexOf(voiced.charAt(i)) !== -1; i++) {
+        var v = VOWEL_OF_MARK[voiced.charAt(i)];
+        if (v && !found) found = v;
+      }
+      if (!found) return "";
+      /* A hirik written with a following yud is what the child actually sees on screen,
+         so classify it from the plain spelling rather than the vocalized one. */
+      if (found === "i" && plain.charAt(1) === "י") return "y";
+      return found;
+    }
+
+    /* Vocalized (menukad) spellings, used ONLY for speech. Hebrew text-to-speech has to
+       guess the vowels of unpointed words and often guesses wrong; feeding it nikud makes
+       the reading far more accurate. The screen still shows the plain, unpointed word. */
+    var SAY = {
+      "צפרדע": "צְפַרְדֵּעַ", "כיסא": "כִּסֵּא", "עץ": "עֵץ", "בית": "בַּיִת",
+      "כלב": "כֶּלֶב", "חתול": "חָתוּל", "שמש": "שֶׁמֶשׁ", "ירח": "יָרֵחַ",
+      "מכונית": "מְכוֹנִית", "תפוח": "תַּפּוּחַ", "בננה": "בָּנָנָה", "דג": "דָּג",
+      "אריה": "אַרְיֵה", "פיל": "פִּיל", "פרה": "פָּרָה", "פרח": "פֶּרַח",
+      "ספר": "סֵפֶר", "גרב": "גֶּרֶב", "נעל": "נַעַל", "בלון": "בַּלּוֹן",
+      "עוגה": "עוּגָה", "חלב": "חָלָב", "ביצה": "בֵּיצָה", "גבינה": "גְּבִינָה",
+      "פיצה": "פִּיצָה", "כדור": "כַּדּוּר", "אופניים": "אוֹפַנַּיִם", "מטוס": "מָטוֹס",
+      "ספינה": "סְפִינָה", "רכבת": "רַכֶּבֶת", "ציפור": "צִפּוֹר", "דבורה": "דְּבוֹרָה",
+      "פרפר": "פַּרְפַּר", "עכביש": "עַכָּבִישׁ", "נחש": "נָחָשׁ", "צב": "צָב",
+      "סוס": "סוּס", "תרנגולת": "תַּרְנְגוֹלֶת", "ברווז": "בַּרְוָז", "קשת": "קֶשֶׁת",
+      "כוכב": "כּוֹכָב", "ענן": "עָנָן", "גשם": "גֶּשֶׁם", "שלג": "שֶׁלֶג",
+      "אש": "אֵשׁ", "מים": "מַיִם", "לחם": "לֶחֶם", "כובע": "כּוֹבַע",
+      "חולצה": "חֻלְצָה", "חלון": "חַלּוֹן", "דלת": "דֶּלֶת", "מיטה": "מִטָּה",
+      "שוקולד": "שׁוֹקוֹלָד", "גלידה": "גְּלִידָה", "גזר": "גֶּזֶר", "עגבנייה": "עַגְבָנִיָּה",
+      "תירס": "תִּירָס", "ענבים": "עֲנָבִים", "אבטיח": "אֲבַטִּיחַ", "תפוז": "תַּפּוּז",
+      "לימון": "לִימוֹן", "קוף": "קוֹף", "עכבר": "עַכְבָּר", "ארנב": "אַרְנָב",
+      "שועל": "שׁוּעָל", "דוב": "דֹּב", "כבשה": "כִּבְשָׂה", "עז": "עֵז",
+      "גמל": "גָּמָל", "גיטרה": "גִּיטָרָה", "תוף": "תֹּף", "פסנתר": "פְּסַנְתֵּר",
+      "כינור": "כִּנּוֹר", "טלפון": "טֶלֶפוֹן", "שעון": "שָׁעוֹן", "מפתח": "מַפְתֵּחַ",
+      "מספריים": "מִסְפָּרַיִם", "דלי": "דְּלִי", "דובי": "דֻּבִּי", "מתנה": "מַתָּנָה",
+      "כתר": "כֶּתֶר", "טבעת": "טַבַּעַת", "נר": "נֵר", "מראה": "מַרְאָה",
+      "חללית": "חֲלָלִית", "פטרייה": "פִּטְרִיָּה", "בצל": "בָּצָל", "סרטן": "סַרְטָן",
+      "תמנון": "תַּמְנוּן", "כריש": "כָּרִישׁ", "לווייתן": "לִוְיָתָן", "ינשוף": "יַנְשׁוּף",
+      "פינגווין": "פִּינְגְּוִין", "עיפרון": "עִפָּרוֹן", "תיק": "תִּיק", "עפיפון": "עֲפִיפוֹן",
+      "כף": "כַּף", "מזלג": "מַזְלֵג", "סכין": "סַכִּין", "צלחת": "צַלַּחַת",
+      "קרח": "קֶרַח", "קקטוס": "קַקְטוּס", "דקל": "דֶּקֶל", "אבן": "אֶבֶן",
+      "הר": "הַר", "גל": "גַּל", "אוטובוס": "אוֹטוֹבּוּס", "מסוק": "מַסּוֹק",
+      "כפפות": "כְּפָפוֹת", "צעיף": "צָעִיף", "מטרייה": "מִטְרִיָּה", "סולם": "סֻלָּם",
+      "פטיש": "פַּטִּישׁ", "שן": "שֵׁן", "עין": "עַיִן", "אוזן": "אֹזֶן",
+      "יד": "יָד", "לב": "לֵב", "נוצה": "נוֹצָה", "אגוז": "אֱגוֹז",
+      "דבש": "דְּבַשׁ", "אורז": "אֹרֶז", "אמבטיה": "אַמְבַּטְיָה", "סבון": "סַבּוֹן",
+      "ספה": "סַפָּה", "מנורה": "מְנוֹרָה", "מצלמה": "מַצְלֵמָה", "מחשב": "מַחְשֵׁב",
+      "קובייה": "קֻבִּיָּה", "רמזור": "רַמְזוֹר", "עוגן": "עֹגֶן", "פעמון": "פַּעֲמוֹן",
+      "משקפיים": "מִשְׁקָפַיִם", "שמלה": "שִׂמְלָה", "מעיל": "מְעִיל", "נמלה": "נְמָלָה",
+      "תולעת": "תּוֹלַעַת", "עקרב": "עַקְרָב", "תנין": "תַּנִּין", "זברה": "זֶבְּרָה",
+      "זאב": "זְאֵב", "עטלף": "עֲטַלֵּף", "סנאי": "סְנָאִי", "קיפוד": "קִפּוֹד",
+      "קנגורו": "קֶנְגּוּרוּ", "נמר": "נָמֵר", "טירה": "טִירָה", "מגנט": "מַגְנֵט",
+      "ברק": "בָּרָק", "יונה": "יוֹנָה", "תוכי": "תֻּכִּי", "אפרוח": "אֶפְרוֹחַ",
+      "דובדבן": "דֻּבְדְּבָן", "תות": "תּוּת", "אגס": "אַגָּס", "זית": "זַיִת",
+      "פלפל": "פִּלְפֵּל", "מלפפון": "מְלָפְפוֹן", "סוכרייה": "סֻכָּרִיָּה", "חילזון": "חִלָּזוֹן",
+      "ורד": "וֶרֶד", "רגל": "רֶגֶל", "רובוט": "רוֹבּוֹט", "זבוב": "זְבוּב",
+      "טרקטור": "טְרַקְטוֹר", "ליצן": "לֵיצָן", "ילד": "יֶלֶד", "גלגל": "גַּלְגַּל",
+      "ג'ירפה": "גִירָפָה", "דולפין": "דוֹלְפִין", "אוגר": "אוֹגֵר", "פלמינגו": "פְלָמִינְגּוֹ",
+      "טווס": "טַוָּס", "לטאה": "לְטָאָה", "עצלן": "עַצְלָן", "קואלה": "קוֹאָלָה",
+      "פנדה": "פַּנְדָּה", "היפופוטם": "הִיפּוֹפּוֹטָם", "קרנף": "קַרְנַף", "חרגול": "חַרְגּוֹל",
+      "צדף": "צֶדֶף", "עצם": "עֶצֶם", "אננס": "אֲנָנָס", "מנגו": "מַנְגּוֹ",
+      "אפרסק": "אֲפַרְסֵק", "קוקוס": "קוֹקוֹס", "ברוקולי": "בְּרוֹקוֹלִי", "בטטה": "בָּטָטָה",
+      "וופל": "וָפֶל", "המבורגר": "הַמְבּוּרְגֶּר", "נקניקייה": "נַקְנִיקִיָּה", "כריך": "כָּרִיךְ",
+      "סלט": "סָלָט", "מרק": "מָרָק", "עוגייה": "עוּגִיָּה", "סופגנייה": "סֻפְגָּנִיָּה",
+      "פופקורן": "פּוֹפְּקוֹרְן", "קפה": "קָפֶה", "תה": "תֵּה", "מיץ": "מִיץ",
+      "יין": "יַיִן", "חמאה": "חֶמְאָה", "בשר": "בָּשָׂר", "חסה": "חַסָּה",
+      "שום": "שׁוּם", "מלון": "מֵלוֹן", "מברשת": "מִבְרֶשֶׁת", "ספוג": "סְפוֹג",
+      "סל": "סַל", "מחט": "מַחַט", "צמר": "צֶמֶר", "ארנק": "אַרְנָק",
+      "עניבה": "עֲנִיבָה", "מגף": "מַגָּף", "מזוודה": "מִזְוָדָה", "יהלום": "יַהֲלוֹם",
+      "פנס": "פַּנָּס", "תקע": "תֶּקַע", "כסף": "כֶּסֶף", "עגלה": "עֲגָלָה",
+      "קופסה": "קֻפְסָה", "מכתב": "מִכְתָּב", "מנעול": "מַנְעוּל", "לבנה": "לְבֵנָה",
+      "בורג": "בֹּרֶג", "ארגז": "אַרְגָּז", "אמבולנס": "אַמְבּוּלַנְס", "מונית": "מוֹנִית",
+      "משאית": "מַשָּׂאִית", "אופנוע": "אוֹפַנּוֹעַ", "סירה": "סִירָה", "מגדל": "מִגְדָּל",
+      "אי": "אִי", "מדבר": "מִדְבָּר", "אוהל": "אֹהֶל", "גשר": "גֶּשֶׁר",
+      "מפה": "מַפָּה", "שער": "שַׁעַר", "חכה": "חַכָּה", "וו": "וָו",
+      "חוט": "חוּט", "קשר": "קֶשֶׁר", "חצוצרה": "חֲצוֹצְרָה", "אוזניות": "אָזְנִיּוֹת",
+      "רדיו": "רַדְיוֹ", "טלוויזיה": "טֶלֶוִיזְיָה", "עיתון": "עִתּוֹן", "דגל": "דֶּגֶל",
+      "קרקס": "קִרְקָס", "תמונה": "תְּמוּנָה", "מקלחת": "מִקְלַחַת", "עלה": "עָלֶה",
+      "זרע": "זֶרַע", "זר": "זֵר", "עציץ": "עָצִיץ", "רוח": "רוּחַ",
+      "שביט": "שָׁבִיט", "חליל": "חָלִיל", "גביע": "גָּבִיעַ", "לשון": "לָשׁוֹן",
+      "פה": "פֶּה", "מוח": "מֹחַ", "תינוק": "תִּינוֹק", "ילדה": "יַלְדָּה",
+      "סבתא": "סָבְתָא", "סבא": "סַבָּא", "שוטר": "שׁוֹטֵר", "קוסם": "קוֹסֵם",
+      "מלך": "מֶלֶךְ", "דרך": "דֶּרֶךְ", "חוף": "חוֹף", "זהב": "זָהָב"
+    };
+
+    var NIKUD = {};
+    (function () {
+      for (var i = 0; i < WORDS.length; i++) {
+        var w = WORDS[i].word;
+        var v = firstVowelOf(w, SAY[w] || w);
+        if (v) NIKUD[w] = v;
+      }
+    })();
+
+    /* Letter groups the levels are built from. */
+    var SIMPLE_LETTERS = "בגדזחטכלמנספצקרשת";  /* plain consonants, no finals, no אהוי־ע */
+    var OTHER_FIRSTS = "אהויע";               /* everything level 1 leaves out */
+    var FINAL_LETTERS = "ךםןףץ";               /* sofit forms */
+    var VOWEL_ENDINGS = "אהוי";
+    var OTHER_ENDINGS = SIMPLE_LETTERS + "ע" + FINAL_LETTERS;
+
+    var LEVELS = [
+      null,
+      {
+        mode: "first", label: "שלב 1", prompt: "באיזו אות מתחילה המילה?",
+        groups: [{ chars: SIMPLE_LETTERS, weight: 1 }]
+      },
+
+      {
+        mode: "first", label: "שלב 2", prompt: "באיזו אות מתחילה המילה?",
+        groups: [{ chars: OTHER_FIRSTS, weight: 0.75 }, { chars: SIMPLE_LETTERS, weight: 0.25 }]
+      },
+
+      {
+        mode: "last", label: "שלב 3", prompt: "באיזו אות נגמרת המילה?",
+        groups: [{ chars: SIMPLE_LETTERS, weight: 1 }]
+      },
+
+      {
+        mode: "last", label: "שלב 4", prompt: "באיזו אות נגמרת המילה?",
+        groups: [{ chars: FINAL_LETTERS, weight: 0.75 }, { chars: SIMPLE_LETTERS, weight: 0.25 }]
+      },
+
+      {
+        mode: "last", label: "שלב 5", prompt: "באיזו אות נגמרת המילה?",
+        groups: [{ chars: VOWEL_ENDINGS, weight: 0.75 }, { chars: OTHER_ENDINGS, weight: 0.25 }]
+      },
+
+      {
+        mode: "nikud", label: "שלב 6", prompt: "איזה ניקוד יש באות הראשונה?",
+        groups: [{ chars: "ai", weight: 1 }]
+      },
+
+      {
+        mode: "nikud", label: "שלב 7", prompt: "איזה ניקוד יש באות הראשונה?",
+        groups: [{ chars: "qi", weight: 1 }]
+      },
+
+      {
+        mode: "nikud", label: "שלב 8", prompt: "איזה ניקוד יש באות הראשונה?",
+        groups: [{ chars: "ya", weight: 1 }]
+      },
+
+      {
+        mode: "nikud", label: "שלב 9", prompt: "איזה ניקוד יש באות הראשונה?",
+        groups: [{ chars: "ea", weight: 1 }]
+      },
+
+      {
+        mode: "nikud", label: "שלב 10", prompt: "איזה ניקוד יש באות הראשונה?",
+        groups: [{ chars: "aye", weight: 1 }]
+      },
+
+      {
+        mode: "nikud", label: "שלב 11", prompt: "איזה ניקוד יש באות הראשונה?",
+        groups: [{ chars: "ti", weight: 1 }]
+      },
+
+      {
+        mode: "nikud", label: "שלב 12", prompt: "איזה ניקוד יש באות הראשונה?",
+        groups: [{ chars: "tqy", weight: 1 }]
+      }
+    ];
+
+    var MAX_LEVEL = LEVELS.length - 1;
+    var LAST_LEVEL = Math.max(1, Math.min(CONFIG.numberOfLevels, MAX_LEVEL));
+    var TARGET = Math.max(1, CONFIG.correctAnswersPerLevel);
+    var LETTER_CAP = 8;     /* keeps common letters from crowding out rare ones */
+
+    function lastChar(w) { return w.charAt(w.length - 1); }
+
+    function keyOf(entry, mode) {
+      if (mode === "first") return entry.letter;
+      if (mode === "last") return lastChar(entry.word);
+      return NIKUD[entry.word] || "";
+    }
+
+    /* A group holds the words for one bucket of answers, bucketed by answer so that
+       rare letters still come up regularly instead of drowning in the common ones. */
+    function buildGroup(mode, chars) {
+      var byKey = {}, keys = [];
+      for (var i = 0; i < WORDS.length; i++) {
+        var k = keyOf(WORDS[i], mode);
+        if (!k || chars.indexOf(k) === -1) continue;
+        if (!byKey[k]) { byKey[k] = []; keys.push(k); }
+        byKey[k].push(WORDS[i]);
+      }
+      keys.sort();
+      return { byKey: byKey, keys: keys, decks: {} };
+    }
+
+    for (var lv = 1; lv <= MAX_LEVEL; lv++) {
+      var cfg = LEVELS[lv];
+      for (var g = 0; g < cfg.groups.length; g++) {
+        var grp = cfg.groups[g];
+        var built = buildGroup(cfg.mode, grp.chars);
+        grp.byKey = built.byKey;
+        grp.keys = built.keys;
+        grp.decks = built.decks;
+      }
+      cfg.groups = cfg.groups.filter(function (x) { return x.keys.length > 0; });
+    }
+
+    var el = {
+      picture: document.getElementById("picture"),
+      word: document.getElementById("word"),
+      options: document.getElementById("options"),
+      banner: document.getElementById("banner"),
+      prompt: document.getElementById("prompt"),
+      say: document.getElementById("say"),
+      reset: document.getElementById("reset"),
+      levelPill: document.getElementById("levelPill"),
+      starsPill: document.getElementById("starsPill"),
+      cyclesPill: document.getElementById("cyclesPill"),
+      progressText: document.getElementById("progressText"),
+      levelPicker: document.getElementById("levelPicker"),
+      pips: document.getElementById("pips")
+    };
+
+    var CHEERS = ["יופי!", "כל הכבוד!", "מעולה!", "נכון מאוד!", "אלוף!", "בול!", "וואו!"];
+    var NUDGES = ["כמעט, נסה שוב", "לא נורא, עוד ניסיון", "תנסה אפשרות אחרת", "כמעט! עוד פעם"];
+
+    var current = null;
+    var currentGroup = null;
+    var currentAnswer = "";
+    var level = 1;
+    var solved = 0;      /* correct answers so far in this level */
+    var stars = 0;
+    var cycles = 0;      /* how many times every level was completed */
+    var firstTry = true;
+    var locked = false;
+
+    function shuffle(arr) {
+      for (var i = arr.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+      }
+      return arr;
+    }
+
+    function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    function pickGroup() {
+      var groups = LEVELS[level].groups;
+      var total = 0, i;
+      for (i = 0; i < groups.length; i++) total += groups[i].weight;
+      var r = Math.random() * total;
+      for (i = 0; i < groups.length; i++) {
+        r -= groups[i].weight;
+        if (r <= 0) return groups[i];
+      }
+      return groups[groups.length - 1];
+    }
+
+    function pickKey(group) {
+      /* Vowel levels weight every choice equally, so no nikud mark dominates. */
+      if (LEVELS[level].mode === "nikud") return pick(group.keys);
+
+      var total = 0, i;
+      for (i = 0; i < group.keys.length; i++) {
+        total += Math.min(group.byKey[group.keys[i]].length, LETTER_CAP);
+      }
+      var r = Math.random() * total;
+      for (i = 0; i < group.keys.length; i++) {
+        r -= Math.min(group.byKey[group.keys[i]].length, LETTER_CAP);
+        if (r <= 0) return group.keys[i];
+      }
+      return group.keys[group.keys.length - 1];
+    }
+
+    function drawWord(group) {
+      var key = pickKey(group);
+      if (!group.decks[key] || group.decks[key].length === 0) {
+        group.decks[key] = shuffle(group.byKey[key].slice());
+      }
+      return group.decks[key].pop();
+    }
+
+    /* ---------- sound: short tones synthesised on the fly, no audio files ---------- */
+    var audioCtx = null;
+
+    function ensureAudio() {
+      if (audioCtx) {
+        /* iOS parks the context in "suspended" until a real touch resumes it. */
+        if (audioCtx.state === "suspended" && audioCtx.resume) audioCtx.resume();
+        return audioCtx;
+      }
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return null;
+      audioCtx = new Ctx();
+      if (audioCtx.state === "suspended" && audioCtx.resume) audioCtx.resume();
+      return audioCtx;
+    }
+
+    function tone(freq, startAt, duration, type, volume) {
+      var ctx = ensureAudio();
+      if (!ctx) return;
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = type || "sine";
+      osc.frequency.value = freq;
+      var t0 = ctx.currentTime + startAt;
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(volume || 0.25, t0 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t0);
+      osc.stop(t0 + duration + 0.05);
+    }
+
+    function playCorrect() {
+      tone(660, 0, 0.16, "triangle", 0.3);
+      tone(880, 0.13, 0.18, "triangle", 0.3);
+      tone(1320, 0.27, 0.28, "triangle", 0.22);
+    }
+
+    function playWrong() {
+      tone(200, 0, 0.22, "sawtooth", 0.16);
+      tone(150, 0.14, 0.26, "sawtooth", 0.14);
+    }
+
+    /* ---------- speech ----------
+       Unpointed Hebrew is ambiguous, so the engine has to guess vowels and often gets them
+       wrong. We hand it the vocalized spelling from SAY instead, which Hebrew voices honour. */
+    var hebrewVoice = null;
+    var speechState = "unknown";   /* unknown | ok | none */
+    var touched = false;           /* set on the first touch/click, unlocks audio */
+
+    function loadVoices() {
+      if (!window.speechSynthesis) { speechState = "none"; updateSayButton(); return; }
+
+      var voices = window.speechSynthesis.getVoices() || [];
+      if (!voices.length) return;   /* not populated yet; onvoiceschanged will call us again */
+
+      var found = null;
+      for (var i = 0; i < voices.length; i++) {
+        var lang = (voices[i].lang || "").toLowerCase();
+        if (lang.indexOf("he") === 0 || lang.indexOf("iw") === 0) {
+          /* Carmit is the macOS Hebrew voice and reads nikud best. */
+          if (!found || /carmit/i.test(voices[i].name || "")) found = voices[i];
+        }
+      }
+
+      hebrewVoice = found;
+      speechState = found ? "ok" : "none";
+      updateSayButton();
+    }
+
+    function updateSayButton() {
+      if (!el.say) return;
+      if (speechState === "none") {
+        el.say.disabled = true;
+        el.say.textContent = "🔇 אין קול עברי במחשב";
+      } else {
+        el.say.disabled = false;
+        el.say.textContent = "🔊 תגיד לי שוב";
+      }
+    }
+
+    if (window.speechSynthesis) {
+      loadVoices();
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
+    var speakTimer = null;
+
+    function speak(text, rate) {
+      if (!window.speechSynthesis || speechState === "none") return;
+      /* iOS refuses to speak until the user has touched the screen once, and a
+         blocked first utterance can wedge the queue, so wait for that touch. */
+      if (!touched) return;
+
+      var synth = window.speechSynthesis;
+      try {
+        /* One tap can reach here twice (pointerdown and click), and a cancel()
+           issued in the same tick as speak() makes browsers drop the utterance
+           and can leave the queue wedged so nothing is spoken again. Collapsing
+           repeat calls and queueing on a later tick avoids both. */
+        if (speakTimer) { clearTimeout(speakTimer); speakTimer = null; }
+        synth.cancel();
+
+        speakTimer = setTimeout(function () {
+          speakTimer = null;
+          /* Chrome parks the queue in a paused state after an interrupted utterance. */
+          if (synth.paused && synth.resume) synth.resume();
+
+          var u = new SpeechSynthesisUtterance(text);
+          u.lang = "he-IL";
+          u.rate = rate || 0.85;
+          u.pitch = 1.05;
+          if (hebrewVoice) u.voice = hebrewVoice;
+          synth.speak(u);
+        }, 100);
+      } catch (e) { /* speech is a bonus, never a blocker */ }
+    }
+
+    /* Always speak the vocalized spelling when we have one. */
+    function sayWord(rate) {
+      if (!current) return;
+      speak(SAY[current.word] || current.word, rate);
+    }
+
+    /* ---------- confetti ---------- */
+    var CONFETTI_COLORS = ["#ffc93c", "#37b3a0", "#e03131", "#4dabf7", "#fff6e6", "#2f9e44"];
+
+    function confetti(count) {
+      for (var i = 0; i < count; i++) {
+        var piece = document.createElement("div");
+        piece.className = "confetti";
+        piece.style.left = Math.random() * 100 + "vw";
+        piece.style.background = pick(CONFETTI_COLORS);
+        piece.style.animationDuration = (1.1 + Math.random() * 0.9) + "s";
+        piece.style.animationDelay = (Math.random() * 0.25) + "s";
+        document.body.appendChild(piece);
+        (function (node) {
+          setTimeout(function () {
+            if (node.parentNode) node.parentNode.removeChild(node);
+          }, 2600);
+        })(piece);
+      }
+    }
+
+    /* ---------- rounds ---------- */
+    /* Distractors come from the same group as the answer, so level 4 pits sofit forms
+       against other sofit forms rather than against easy plain letters. */
+    function buildChoices(correct, group) {
+      if (LEVELS[level].mode === "nikud") return shuffle(group.keys.slice());
+
+      var bank = group.keys.slice();
+      if (bank.length < 3) {
+        var groups = LEVELS[level].groups;
+        for (var g = 0; g < groups.length; g++) {
+          for (var k = 0; k < groups[g].keys.length; k++) {
+            if (bank.indexOf(groups[g].keys[k]) === -1) bank.push(groups[g].keys[k]);
+          }
+        }
+      }
+
+      var wanted = Math.min(3, bank.length);
+      var choices = [correct];
+      var guard = 0;
+      while (choices.length < wanted && guard < 300) {
+        guard++;
+        var candidate = pick(bank);
+        if (choices.indexOf(candidate) === -1) choices.push(candidate);
+      }
+      return shuffle(choices);
+    }
+
+    function isNikudLevel() { return LEVELS[level].mode === "nikud"; }
+
+    /* The nikud levels show the word's own first letter carrying each vowel. */
+    function faceOf(value) {
+      if (!isNikudLevel()) return value;
+      var face = current.word.charAt(0) + MARK[value];
+      if (value === "y") face += "\u05d9";   /* chirik male carries its yud */
+      return face;
+    }
+
+    function nameOf(value) {
+      if (isNikudLevel()) return NIKUD_NAMES[value];
+      return LETTER_NAMES[value] || "";
+    }
+
+    function revealText() {
+      if (!isNikudLevel()) return current.word;
+      return current.word.charAt(0) + MARK[NIKUD[current.word]] + current.word.slice(1);
+    }
+
+    function bump(node) {
+      node.classList.remove("bump");
+      void node.offsetWidth;
+      node.classList.add("bump");
+    }
+
+    /* ---------- level picker ---------- */
+    var MODE_LABEL = { first: "ראשונה", last: "אחרונה", nikud: "ניקוד" };
+
+    function buildPicker() {
+      el.levelPicker.innerHTML = "";
+      for (var n = 1; n <= LAST_LEVEL; n++) {
+        (function (target) {
+          var btn = document.createElement("button");
+          btn.className = "lvl";
+          btn.type = "button";
+          btn.setAttribute("data-level", target);
+          btn.innerHTML = target + '<span class="what">' + MODE_LABEL[LEVELS[target].mode] + "</span>";
+          btn.setAttribute("aria-label", LEVELS[target].label);
+          btn.addEventListener("click", function () { goToLevel(target); });
+          el.levelPicker.appendChild(btn);
+        })(n);
+      }
+    }
+
+    function markPicker() {
+      var btns = el.levelPicker.querySelectorAll(".lvl");
+      for (var i = 0; i < btns.length; i++) {
+        if (i + 1 === level) btns[i].classList.add("on");
+        else btns[i].classList.remove("on");
+      }
+    }
+
+    function showPicker(open) {
+      if (open) el.levelPicker.classList.remove("hidden");
+      else el.levelPicker.classList.add("hidden");
+      el.levelPill.setAttribute("aria-expanded", open ? "true" : "false");
+    }
+
+    function pickerIsOpen() { return !el.levelPicker.classList.contains("hidden"); }
+
+    /* Jumping to a level starts it fresh; stars and trophies are kept. */
+    function goToLevel(target) {
+      level = Math.max(1, Math.min(target, LAST_LEVEL));
+      solved = 0;
+      showPicker(false);
+      renderHud();
+      nextQuestion();
+    }
+
+    function renderHud() {
+      el.levelPill.textContent = LEVELS[level].label;
+      el.starsPill.textContent = "⭐ " + stars;
+      el.progressText.textContent = "✅ " + solved + " / " + TARGET;
+      markPicker();
+
+      if (cycles > 0) {
+        el.cyclesPill.classList.remove("hidden");
+        el.cyclesPill.textContent = "🏆 " + cycles;
+      } else {
+        el.cyclesPill.classList.add("hidden");
+      }
+
+      el.pips.innerHTML = "";
+      for (var i = 0; i < TARGET; i++) {
+        var pip = document.createElement("div");
+        pip.className = i < solved ? "pip on" : "pip";
+        el.pips.appendChild(pip);
+      }
+    }
+
+    function nextQuestion() {
+      currentGroup = pickGroup();
+      current = drawWord(currentGroup);
+      currentAnswer = keyOf(current, LEVELS[level].mode);
+      firstTry = true;
+      locked = false;
+
+      el.picture.textContent = current.pic;
+      /* The word is the answer, so it is not written into the page until it is earned. */
+      el.word.textContent = "";
+      el.word.classList.remove("show");
+      el.banner.textContent = "";
+      el.banner.classList.remove("big");
+      el.prompt.textContent = LEVELS[level].prompt;
+
+      el.options.innerHTML = "";
+      var correct = currentAnswer;
+      var choices = buildChoices(correct, currentGroup);
+      el.options.className = choices.length === 2 ? "options two" : "options";
+
+      for (var i = 0; i < choices.length; i++) {
+        (function (value) {
+          var btn = document.createElement("button");
+          btn.className = "opt";
+          btn.type = "button";
+          btn.setAttribute("data-value", value);
+          btn.textContent = faceOf(value);
+          btn.setAttribute("aria-label", nameOf(value) || faceOf(value));
+          btn.addEventListener("click", function () { answer(btn, value, correct); });
+          el.options.appendChild(btn);
+        })(choices[i]);
+      }
+
+      // Restart the card pop animation on every new picture.
+      var card = document.querySelector(".card");
+      card.style.animation = "none";
+      void card.offsetWidth;
+      card.style.animation = "";
+
+      sayWord();
+    }
+
+    /* Returns the celebration text when a level or a full round was just completed. */
+    function advance() {
+      solved = 0;
+      if (level < LAST_LEVEL) {
+        level++;
+        return "עלית לשלב " + level + "!";
+      }
+      cycles++;
+      level = 1;
+      return "סיימת את כל השלבים! 🏆";
+    }
+
+    function answer(btn, value, correct) {
+      if (locked || btn.disabled) return;
+
+      if (value !== correct) {
+        firstTry = false;
+        btn.classList.add("wrong");
+        btn.disabled = true;
+        playWrong();
+        el.banner.textContent = pick(NUDGES);
+        return;
+      }
+
+      locked = true;
+      btn.classList.add("correct");
+      var buttons = el.options.querySelectorAll(".opt");
+      for (var i = 0; i < buttons.length; i++) {
+        buttons[i].disabled = true;
+        if (buttons[i] !== btn) buttons[i].classList.add("faded");
+      }
+      el.word.textContent = revealText();
+      el.word.classList.add("show");
+      playCorrect();
+
+      var promoted = "";
+      if (firstTry) {
+        stars++;
+        solved++;
+        if (solved >= TARGET) promoted = advance();
+      }
+      renderHud();
+      bump(promoted ? el.levelPill : el.starsPill);
+
+      if (promoted) {
+        el.banner.textContent = promoted;
+        el.banner.classList.add("big");
+        confetti(cycles > 0 && level === 1 ? 220 : 130);
+        tone(523, 0.35, 0.2, "triangle", 0.28);
+        tone(659, 0.5, 0.2, "triangle", 0.28);
+        tone(784, 0.65, 0.45, "triangle", 0.3);
+        setTimeout(function () { speak(promoted, 0.95); }, 700);
+        setTimeout(nextQuestion, 3600);
+        return;
+      }
+
+      el.banner.textContent = firstTry ? pick(CHEERS) : "יפה, מצאת!";
+      if (firstTry) confetti(18);
+      setTimeout(function () { sayWord(0.8); }, 450);
+      setTimeout(nextQuestion, 2100);
+    }
+
+    el.say.addEventListener("click", function () {
+      ensureAudio();
+      sayWord(0.75);
+    });
+
+    el.levelPill.addEventListener("click", function () {
+      showPicker(!pickerIsOpen());
+    });
+
+    el.reset.addEventListener("click", function () {
+      level = 1;
+      solved = 0;
+      stars = 0;
+      cycles = 0;
+      showPicker(false);
+      renderHud();
+      nextQuestion();
+    });
+
+    // Tablets block audio until the first touch; wake sound and speech on it.
+    document.addEventListener("pointerdown", function once() {
+      document.removeEventListener("pointerdown", once);
+      touched = true;
+      ensureAudio();
+      sayWord();
+    });
+
+    buildPicker();
+    renderHud();
+    nextQuestion();
+  </script>
+</body>
+
+</html>
