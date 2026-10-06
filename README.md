@@ -65,6 +65,13 @@ the vowel levels stay close to an even split between their options. Distractors 
 drawn from the same group as the answer, so a question about a final letter offers
 other final letters rather than easy giveaways.
 
+## Worlds
+
+The background changes after levels 2, 5 and 13, so moving up feels like arriving
+somewhere new: ocean for levels 1–2, twilight for 3–5, forest for 6–13 and embers
+for 14–16. The new sky crossfades in over about a second during the level-up
+celebration. Palettes live in `WORLDS` near the bottom of the script.
+
 ## Settings
 
 At the top of the `<script>` block in `index.html`:

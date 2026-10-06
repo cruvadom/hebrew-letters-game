@@ -36,16 +36,29 @@
     body {
       font-family: "Rubik", "Assistant", "Noto Sans Hebrew", "Arial Hebrew", "Segoe UI", Arial, sans-serif;
       color: var(--ink);
-      background:
-        radial-gradient(1200px 600px at 80% -10%, rgba(255, 201, 60, .35), transparent 60%),
-        radial-gradient(900px 500px at 10% 110%, rgba(55, 179, 160, .45), transparent 60%),
-        linear-gradient(165deg, var(--deep) 0%, var(--mid) 58%, var(--shore) 100%);
-      background-attachment: fixed;
+      background: var(--deep);
       display: flex;
       flex-direction: column;
       align-items: center;
       padding: 14px 14px 26px;
       overflow-x: hidden;
+    }
+
+    /* Two stacked sky layers so a new world can fade in over the old one. */
+    .sky {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(1200px 600px at 80% -10%, rgba(255, 201, 60, .35), transparent 60%),
+        radial-gradient(900px 500px at 10% 110%, rgba(55, 179, 160, .45), transparent 60%),
+        linear-gradient(165deg, var(--deep) 0%, var(--mid) 58%, var(--shore) 100%);
+    }
+
+    .sky.next {
+      opacity: 0;
+      transition: opacity 1.1s ease;
     }
 
     /* soft dotted texture over the background */
@@ -56,12 +69,12 @@
       background-image: radial-gradient(rgba(255, 255, 255, .10) 1.5px, transparent 1.6px);
       background-size: 28px 28px;
       pointer-events: none;
-      z-index: 0;
+      z-index: 1;
     }
 
     .wrap {
       position: relative;
-      z-index: 1;
+      z-index: 2;
       width: 100%;
       max-width: 720px;
     }
@@ -505,6 +518,8 @@
 </head>
 
 <body>
+  <div class="sky" id="sky"></div>
+  <div class="sky next" id="skyNext"></div>
   <div class="wrap">
     <header>
       <h1>משחק האותיות</h1>
@@ -1234,6 +1249,8 @@
       cyclesPill: document.getElementById("cyclesPill"),
       progressText: document.getElementById("progressText"),
       levelPicker: document.getElementById("levelPicker"),
+      sky: document.getElementById("sky"),
+      skyNext: document.getElementById("skyNext"),
       pips: document.getElementById("pips")
     };
 
@@ -1544,6 +1561,68 @@
       node.classList.add("bump");
     }
 
+    /* ---------- worlds ----------
+       The sky changes after levels 2, 5 and 13, so moving up feels like
+       arriving somewhere new rather than just seeing a bigger number. */
+    var WORLDS = [
+      { from: 1, deep: "#12314a", mid: "#1f6f7a", shore: "#37b3a0" },  /* ocean    */
+      { from: 3, deep: "#231145", mid: "#6d3b86", shore: "#c86b8a" },  /* twilight */
+      { from: 6, deep: "#0f2e22", mid: "#2b6b4a", shore: "#7fb069" },  /* forest   */
+      { from: 14, deep: "#2d1220", mid: "#8a3a3a", shore: "#e0915a" }  /* embers   */
+    ];
+
+    function worldOf(lvl) {
+      var found = 0;
+      for (var i = 0; i < WORLDS.length; i++) if (lvl >= WORLDS[i].from) found = i;
+      return found;
+    }
+
+    function skyOf(world) {
+      var w = WORLDS[world];
+      return "radial-gradient(1200px 600px at 80% -10%, rgba(255,201,60,.35), transparent 60%)," +
+        "radial-gradient(900px 500px at 10% 110%, rgba(55,179,160,.45), transparent 60%)," +
+        "linear-gradient(165deg, " + w.deep + " 0%, " + w.mid + " 58%, " + w.shore + " 100%)";
+    }
+
+    var shownWorld = -1;
+    var skyTimer = null;
+
+    function commitSky(world) {
+      el.sky.style.background = skyOf(world);
+      document.body.style.background = WORLDS[world].deep;
+      el.skyNext.style.transition = "none";
+      el.skyNext.style.opacity = "0";
+      void el.skyNext.offsetWidth;
+      el.skyNext.style.transition = "";
+    }
+
+    function applyWorld(lvl) {
+      var world = worldOf(lvl);
+      if (world === shownWorld) return;
+
+      /* A fade still in flight is finished at once, so jumping between worlds
+         quickly can never leave the spare layer stranded on screen. */
+      if (skyTimer) {
+        clearTimeout(skyTimer);
+        skyTimer = null;
+        if (shownWorld !== -1) commitSky(shownWorld);
+      }
+
+      if (shownWorld === -1) {
+        shownWorld = world;
+        commitSky(world);
+        return;
+      }
+
+      /* Fade the new sky in on the spare layer, then make it the base. */
+      shownWorld = world;
+      el.skyNext.style.background = skyOf(world);
+      el.skyNext.style.opacity = "1";
+      skyTimer = setTimeout(function () {
+        skyTimer = null;
+        commitSky(world);
+      }, 1200);
+    }
     /* ---------- level picker ---------- */
     var MODE_LABEL = { first: "ראשונה", last: "אחרונה", nikud: "ניקוד", sound: "ניקוד" };
 
@@ -1592,6 +1671,7 @@
       el.levelPill.textContent = LEVELS[level].label;
       el.starsPill.textContent = "⭐ " + stars;
       el.progressText.textContent = "✅ " + solved + " / " + TARGET;
+      applyWorld(level);
       markPicker();
 
       if (cycles > 0) {

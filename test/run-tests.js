@@ -64,7 +64,8 @@ function mkEl(tag) {
 
 var IDS = {};
 var idList = ["picture", "word", "options", "banner", "prompt", "say", "reset",
-              "levelPill", "starsPill", "cyclesPill", "progressText", "pips", "levelPicker"];
+              "levelPill", "starsPill", "cyclesPill", "progressText", "pips", "levelPicker",
+              "sky", "skyNext"];
 for (var ii = 0; ii < idList.length; ii++) IDS[idList[ii]] = mkEl("div");
 
 var DOC_LISTENERS = {};
@@ -713,6 +714,86 @@ for (var sq = 0; sq < 800; sq++) {
 }
 check(keysOf(offPool).length === 0, "shva questions used unvetted words: " + keysOf(offPool).join(" "));
 print("every shva question comes from the vetted list");
+
+// ------------------------------------------------------------- worlds
+print("");
+print("=== worlds ===");
+dropTimers();
+
+/* The sky must change after levels 2, 5 and 13 and nowhere else. */
+var expectedBoundaries = [3, 6, 14];
+var switches = [];
+for (var wl = 2; wl <= MAX_LEVEL; wl++) {
+  if (worldOf(wl) !== worldOf(wl - 1)) switches.push(wl);
+}
+check(switches.join(",") === expectedBoundaries.join(","),
+  "sky changes entering levels " + switches.join(",") + ", expected " + expectedBoundaries.join(","));
+print("sky changes entering levels " + switches.join(", ") + " (after 2, 5 and 13)");
+
+var wmap = [];
+for (var wi = 1; wi <= MAX_LEVEL; wi++) wmap.push(worldOf(wi));
+print("level -> world: " + wmap.join(" "));
+check(worldOf(1) === 0 && worldOf(2) === 0, "levels 1-2 should share the first world");
+check(worldOf(5) === 1 && worldOf(3) === 1, "levels 3-5 should share the second world");
+check(worldOf(6) === 2 && worldOf(13) === 2, "levels 6-13 should share the third world");
+check(worldOf(14) === 3 && worldOf(MAX_LEVEL) === 3, "levels 14+ should share the last world");
+
+// each world needs its own distinct colours
+var seenSkies = {};
+for (var ws = 0; ws < WORLDS.length; ws++) {
+  var sky = skyOf(ws);
+  check(!seenSkies[sky], "world " + ws + " reuses another world's colours");
+  check(sky.indexOf("undefined") === -1, "world " + ws + " has a broken gradient");
+  seenSkies[sky] = true;
+}
+print(WORLDS.length + " distinct skies");
+
+// crossing a boundary fades the spare layer in, then promotes it
+level = 1; solved = 0; shownWorld = -1;
+applyWorld(1);
+var baseBefore = IDS.sky.style.background;
+check(baseBefore.indexOf(WORLDS[0].deep) !== -1, "world 1 should be painted on load");
+check(IDS.skyNext.style.opacity !== "1", "nothing should be fading on load");
+
+applyWorld(3);
+check(IDS.skyNext.style.opacity === "1", "entering a new world should fade the next sky in");
+check(IDS.skyNext.style.background.indexOf(WORLDS[1].deep) !== -1,
+  "the fading layer should carry the new world's colours");
+check(IDS.sky.style.background === baseBefore, "the base sky should not jump before the fade");
+flushTimers();
+check(IDS.sky.style.background.indexOf(WORLDS[1].deep) !== -1,
+  "after the fade the new sky should become the base");
+check(IDS.skyNext.style.opacity === "0", "the spare layer should be reset after the fade");
+print("crossing a boundary crossfades, then promotes the new sky");
+
+// staying inside a world must not repaint
+var stable = IDS.sky.style.background;
+applyWorld(4);
+applyWorld(5);
+check(IDS.skyNext.style.opacity === "0" && IDS.sky.style.background === stable,
+  "moving within a world should not change the sky");
+print("moving within a world leaves the sky alone");
+
+// jumping with the picker lands on the right world
+IDS.levelPill.click();
+IDS.levelPicker.children[MAX_LEVEL - 1].click();
+flushTimers();
+check(shownWorld === worldOf(MAX_LEVEL), "jumping to the last level should land in its world");
+print("the level picker moves the sky too");
+
+// an interrupted fade must not strand the spare layer
+level = 1; solved = 0; shownWorld = -1; dropTimers();
+applyWorld(1);
+applyWorld(3);              // start a fade
+applyWorld(6);              // interrupt it before it finishes
+check(IDS.skyNext.style.opacity === "1", "the second fade should still be running");
+check(IDS.sky.style.background.indexOf(WORLDS[1].deep) !== -1,
+  "the interrupted world should have been committed as the base");
+flushTimers();
+check(IDS.sky.style.background.indexOf(WORLDS[2].deep) !== -1,
+  "the final world should win after an interrupted fade");
+check(IDS.skyNext.style.opacity === "0", "the spare layer should end up hidden");
+print("an interrupted crossfade settles on the final world");
 
 print("");
 print(failures === 0 ? "ALL CHECKS PASSED" : failures + " CHECK(S) FAILED");
