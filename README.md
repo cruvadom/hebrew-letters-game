@@ -6,7 +6,7 @@ the word is read aloud, and the child picks the right letter or vowel.
 No build step, no server, no internet, no dependencies — just one HTML file.
 Open it and play.
 
-![levels](https://img.shields.io/badge/levels-16-f5a623) ![words](https://img.shields.io/badge/words-280-2f9e44) ![license](https://img.shields.io/badge/license-MIT-blue)
+![levels](https://img.shields.io/badge/levels-16-f5a623) ![words](https://img.shields.io/badge/words-296-2f9e44) ![license](https://img.shields.io/badge/license-MIT-blue)
 
 ## Playing
 
