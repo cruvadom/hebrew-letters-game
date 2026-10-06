@@ -6,7 +6,7 @@ the word is read aloud, and the child picks the right letter or vowel.
 No build step, no server, no internet, no dependencies — just one HTML file.
 Open it and play.
 
-![levels](https://img.shields.io/badge/levels-15-f5a623) ![words](https://img.shields.io/badge/words-280-2f9e44) ![license](https://img.shields.io/badge/license-MIT-blue)
+![levels](https://img.shields.io/badge/levels-16-f5a623) ![words](https://img.shields.io/badge/words-280-2f9e44) ![license](https://img.shields.io/badge/license-MIT-blue)
 
 ## Playing
 
@@ -47,11 +47,14 @@ Without one, the game still plays normally and the speaker button says so.
 | 10 | First vowel | patah vs hirik+yud vs segol |
 | 11 | First vowel | tzere vs hirik |
 | 12 | First vowel | tzere vs kamatz vs hirik+yud |
-| 13 | First **sound** | o vs e |
-| 14 | First **sound** | o vs u |
-| 15 | First **sound** | three of a / e / i / o / u |
+| 13 | First vowel | shva vs patah / kamatz / segol / tzere (half are shva) |
+| 14 | First **sound** | o vs e |
+| 15 | First **sound** | o vs u |
+| 16 | First **sound** | three of a / e / i / o / u |
 
-Levels 6–12 ask for the exact nikud mark. Levels 13–15 ask for the vowel *sound*,
+Levels 6–13 ask for the exact nikud mark. Level 13 always puts a shva against one
+other mark, so the child is deciding "shva or not" rather than comparing two full
+vowels. Levels 14–16 ask for the vowel *sound*,
 grouping the marks that share one: **a** is patah or kamatz, **e** is segol or tzere,
 **i** is hirik with or without a yud, **o** is holam male (שׁוֹ) or holam haser (שֹׁ),
 and **u** is shuruk (שׁוּ). Each sound button always shows the same canonical mark,
@@ -69,11 +72,11 @@ At the top of the `<script>` block in `index.html`:
 ```js
 var CONFIG = {
   correctAnswersPerLevel: 10,  // correct answers needed to clear a level
-  numberOfLevels: 15           // play only the first N levels, then the trophy
+  numberOfLevels: 16           // play only the first N levels, then the trophy
 };
 ```
 
-Set `numberOfLevels` to 6 and levels 7–15 are skipped entirely: finishing level 6
+Set `numberOfLevels` to 6 and levels 7–16 are skipped entirely: finishing level 6
 awards the trophy and returns to level 1.
 
 ## Adding words

@@ -186,8 +186,17 @@ function sample(lvl, n) {
     var vals = values();
     var expect;
     if (LEVELS[lvl].mode === "nikud" || LEVELS[lvl].mode === "sound") {
-      var avail = LEVELS[lvl].groups[0].chars.length;
-      expect = Math.min(LEVELS[lvl].options || avail, avail);
+      if (LEVELS[lvl].contrast) {
+        expect = 2;
+      } else {
+        var union = {};
+        for (var ug = 0; ug < LEVELS[lvl].groups.length; ug++) {
+          var uc = LEVELS[lvl].groups[ug].chars;
+          for (var uk = 0; uk < uc.length; uk++) union[uc.charAt(uk)] = true;
+        }
+        var avail = keysOf(union).length;
+        expect = Math.min(LEVELS[lvl].options || avail, avail);
+      }
     } else {
       expect = 3;
     }
@@ -540,7 +549,7 @@ print("vowel levels 6-" + MAX_LEVEL + " stay silent when an option is pressed");
 // --------------------------------------------------------- sound levels
 print("");
 print("=== sound levels ===");
-var SOUND_SPEC = { 13: "OE", 14: "OU", 15: "AEIOU" };
+var SOUND_SPEC = { 14: "OE", 15: "OU", 16: "AEIOU" };
 var SOUND_LABEL = { A: "a", E: "e", I: "i", O: "o", U: "u" };
 
 var sTally = {};
@@ -559,7 +568,7 @@ for (var need in SOUND_SPEC) {
   }
 }
 
-for (var sl = 13; sl <= 15; sl++) {
+for (var sl = 14; sl <= 16; sl++) {
   var want = LEVELS[sl].options || SOUND_SPEC[sl].length;
   var rs = sample(sl, N), ps = [], slo = 100, shi = 0, si;
   for (si = 0; si < SOUND_SPEC[sl].length; si++) {
@@ -580,8 +589,8 @@ for (var sl = 13; sl <= 15; sl++) {
   print("L" + sl + " (" + want + " options): " + ps.join(", "));
 }
 
-// level 15 must always show exactly three of the five sounds
-level = 15; solved = 0;
+// level 16 must always show exactly three of the five sounds
+level = 16; solved = 0;
 var threes = 0, sawAll = {};
 for (var q15 = 0; q15 < 600; q15++) {
   nextQuestion();
@@ -589,12 +598,12 @@ for (var q15 = 0; q15 < 600; q15++) {
   if (v15.length === 3) threes++;
   for (var z15 = 0; z15 < v15.length; z15++) sawAll[v15[z15]] = true;
 }
-check(threes === 600, "level 15 should always show 3 options, got " + threes + "/600");
-check(keysOf(sawAll).length === 5, "level 15 should use all five sounds as options");
-print("level 15 always shows 3 of the 5 sounds");
+check(threes === 600, "level 16 should always show 3 options, got " + threes + "/600");
+check(keysOf(sawAll).length === 5, "level 16 should use all five sounds as options");
+print("level 16 always shows 3 of the 5 sounds");
 
 // the button faces must use the canonical mark per sound, never leaking the answer
-level = 15; solved = 0;
+level = 16; solved = 0;
 var leak15 = 0;
 for (var f15 = 0; f15 < 400; f15++) {
   nextQuestion();
@@ -610,18 +619,18 @@ for (var f15 = 0; f15 < 400; f15++) {
 check(leak15 === 0, leak15 + " buttons did not use the canonical mark for their sound");
 print("every button uses the canonical mark for its sound (no shape hints)");
 
-level = 13; solved = 0; nextQuestion();
-print("sample L13 buttons: " + faces().join("  ") + "   word: " + current.word);
 level = 14; solved = 0; nextQuestion();
 print("sample L14 buttons: " + faces().join("  ") + "   word: " + current.word);
 level = 15; solved = 0; nextQuestion();
-print("sample L15 buttons: " + faces().join("  ") + "   word: " + current.word +
+print("sample L15 buttons: " + faces().join("  ") + "   word: " + current.word);
+level = 16; solved = 0; nextQuestion();
+print("sample L16 buttons: " + faces().join("  ") + "   word: " + current.word +
       "  reveal: " + revealText());
 
 // the reveal puts holam and shuruk on the vav, not on the first letter
 var checkedVav = 0, wrongVav = 0;
 for (var rv = 0; rv < 400; rv++) {
-  level = 14; solved = 0;
+  level = 15; solved = 0;
   nextQuestion();
   var cls14 = NIKUD[current.word];
   if ((cls14 === "o" || cls14 === "u") && current.word.charAt(1) === VAV) {
@@ -634,6 +643,59 @@ for (var rv = 0; rv < 400; rv++) {
 check(checkedVav > 0 && wrongVav === 0,
   wrongVav + " of " + checkedVav + " reveals put the mark in the wrong place");
 print("holam and shuruk reveals sit on the vav (" + checkedVav + " checked)");
+
+// -------------------------------------------------- shva contrast level
+print("");
+print("=== shva level (13) ===");
+var SHVA = "\u05B0";
+var r13 = sample(13, N);
+var shvaPct = Math.round((r13.hits.s || 0) * 100 / N);
+check(shvaPct >= 46 && shvaPct <= 54, "shva is the answer " + shvaPct + "% of the time, want ~50%");
+var otherParts = [], ok13 = true;
+for (var o13 = 0; o13 < "aqet".length; o13++) {
+  var ch13 = "aqet".charAt(o13);
+  otherParts.push(NAMES[ch13] + " " + Math.round((r13.hits[ch13] || 0) * 100 / N) + "%");
+}
+var seen13 = keysOf(r13.hits);
+for (var s13 = 0; s13 < seen13.length; s13++) {
+  if ("saqet".indexOf(seen13[s13]) === -1) ok13 = false;
+}
+check(ok13, "level 13 answered outside shva/patah/kamatz/segol/tzere: " + seen13.join(" "));
+print("shva " + shvaPct + "%, others " + (100 - shvaPct) + "% (" + otherParts.join(", ") + ")");
+
+// exactly one button is always the shva, whichever way the answer falls
+level = 13; solved = 0;
+var twoOpts = 0, oneShva = 0, answerShown = 0;
+for (var c13 = 0; c13 < 800; c13++) {
+  nextQuestion();
+  var v13 = values(), shvaCount = 0, hasAnswer = false;
+  if (v13.length === 2) twoOpts++;
+  for (var k13 = 0; k13 < v13.length; k13++) {
+    if (v13[k13] === "s") shvaCount++;
+    if (v13[k13] === currentAnswer) hasAnswer = true;
+  }
+  if (shvaCount === 1) oneShva++;
+  if (hasAnswer) answerShown++;
+}
+check(twoOpts === 800, "level 13 should always show 2 options, got " + twoOpts + "/800");
+check(oneShva === 800, "exactly one button should be the shva, held for " + oneShva + "/800");
+check(answerShown === 800, "the answer was missing from the options " + (800 - answerShown) + " times");
+print("always 2 buttons, exactly one of them the shva, answer always present");
+
+// the shva button renders as the first letter with a shva under it
+level = 13; solved = 0;
+var faceBad = 0;
+for (var fb = 0; fb < 300; fb++) {
+  nextQuestion();
+  var vf = values(), ff = faces(), firstf = current.word.charAt(0);
+  for (var bi = 0; bi < vf.length; bi++) {
+    if (ff[bi] !== firstf + MARK[vf[bi]]) faceBad++;
+  }
+}
+check(faceBad === 0, faceBad + " level 13 buttons rendered the wrong mark");
+level = 13; solved = 0; nextQuestion();
+print("sample L13 buttons: " + faces().join("  ") + "   word: " + current.word +
+      "  reveal: " + revealText());
 
 print("");
 print(failures === 0 ? "ALL CHECKS PASSED" : failures + " CHECK(S) FAILED");

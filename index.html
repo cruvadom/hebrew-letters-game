@@ -551,9 +551,9 @@
       correctAnswersPerLevel: 10,
 
       /* How many levels to play before the trophy. Set it to 6, for example,
-         and levels 7-15 are skipped: finishing level 6 awards the trophy and
-         starts over at level 1. Maximum is 15. */
-      numberOfLevels: 15
+         and levels 7-16 are skipped: finishing level 6 awards the trophy and
+         starts over at level 1. Maximum is 16. */
+      numberOfLevels: 16
     };
     /* ==================================================================== */
 
@@ -869,7 +869,7 @@
        so adding a word to WORDS + SAY is enough to make it available to the vowel levels.
          a = patah      i = hirik       q = kamatz    h = holam haser (שֹׁ)
          y = hirik + yud (chirik male)  e = segol     o = holam male  (שׁוֹ)
-         t = tzere                                    u = shuruk      (שׁוּ)                */
+         t = tzere      s = shva (שְׁ)                u = shuruk      (שׁוּ)         */
     var VAV = "\u05D5";
     var HOLAM = "\u05B9";
     var DAGESH = "\u05BC";
@@ -881,6 +881,7 @@
       y: "\u05B4",   /* חיריק מלא - the yud is added by faceOf */
       e: "\u05B6",   /* סגול  */
       t: "\u05B5",   /* צירה  */
+      s: "\u05B0",   /* שווא  */
       h: HOLAM,      /* חולם חסר */
       o: HOLAM,      /* חולם מלא - normally sits on the vav */
       u: "\u05BB"    /* שורוק - fallback only, normally the vav carries it */
@@ -889,12 +890,13 @@
     var NIKUD_NAMES = {
       a: "פתח", i: "חיריק", q: "קמץ",
       y: "חיריק מלא", e: "סגול", t: "צירה",
+      s: "שווא",
       h: "חולם חסר", o: "חולם מלא", u: "שורוק"
     };
 
     var VOWEL_OF_MARK = {
       "\u05B7": "a", "\u05B4": "i", "\u05B8": "q",
-      "\u05B6": "e", "\u05B5": "t", "\u05B9": "h"
+      "\u05B6": "e", "\u05B5": "t", "\u05B9": "h", "\u05B0": "s"
     };
 
     /* The five vowel sounds, used by the levels that ask for the sound rather
@@ -1094,17 +1096,23 @@
       },
 
       {
-        mode: "sound", label: "שלב 13", prompt: "באיזה צליל מתחילה המילה?",
-        groups: [{ chars: "OE", weight: 1 }]
+        mode: "nikud", label: "שלב 13", prompt: "איזה ניקוד יש באות הראשונה?",
+        groups: [{ chars: "s", weight: 0.5 }, { chars: "aqet", weight: 0.5 }],
+        contrast: "s"
       },
 
       {
         mode: "sound", label: "שלב 14", prompt: "באיזה צליל מתחילה המילה?",
-        groups: [{ chars: "OU", weight: 1 }]
+        groups: [{ chars: "OE", weight: 1 }]
       },
 
       {
         mode: "sound", label: "שלב 15", prompt: "באיזה צליל מתחילה המילה?",
+        groups: [{ chars: "OU", weight: 1 }]
+      },
+
+      {
+        mode: "sound", label: "שלב 16", prompt: "באיזה צליל מתחילה המילה?",
         groups: [{ chars: "AEIOU", weight: 1 }], options: 3
       }
     ];
@@ -1377,8 +1385,27 @@
        against other sofit forms rather than against easy plain letters. */
     function buildChoices(correct, group) {
       if (isVowelMode(LEVELS[level].mode)) {
-        var all = group.keys.slice();
-        var cap = LEVELS[level].options || all.length;
+        var cfg = LEVELS[level];
+        var all = [];
+        for (var gi = 0; gi < cfg.groups.length; gi++) {
+          var gk = cfg.groups[gi].keys;
+          for (var gj = 0; gj < gk.length; gj++) {
+            if (all.indexOf(gk[gj]) === -1) all.push(gk[gj]);
+          }
+        }
+
+        /* A contrast level always puts one fixed mark against a single alternative,
+           so exactly one button is the contrast mark whichever way the answer falls. */
+        if (cfg.contrast) {
+          if (correct !== cfg.contrast) return shuffle([cfg.contrast, correct]);
+          var others = [];
+          for (var oi = 0; oi < all.length; oi++) {
+            if (all[oi] !== cfg.contrast) others.push(all[oi]);
+          }
+          return shuffle([cfg.contrast, pick(others)]);
+        }
+
+        var cap = cfg.options || all.length;
         if (cap >= all.length) return shuffle(all);
 
         /* Keep the answer and fill the rest with distractors from the same group. */
