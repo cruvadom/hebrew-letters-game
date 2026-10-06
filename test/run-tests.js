@@ -422,6 +422,20 @@ var picks = IDS.levelPicker.children;
 check(picks.length === LAST_LEVEL,
   "picker should offer " + LAST_LEVEL + " levels, has " + picks.length);
 check(IDS.levelPicker.classList.contains("hidden"), "picker should start closed");
+
+// every button must carry a real caption, never "undefined"
+var badCaption = [];
+for (var cap = 0; cap < picks.length; cap++) {
+  var html = picks[cap]._html;
+  if (html.indexOf("undefined") !== -1 || !MODE_LABEL[LEVELS[cap + 1].mode]) {
+    badCaption.push(cap + 1);
+  }
+}
+check(badCaption.length === 0, "picker buttons show no caption for level(s): " + badCaption.join(", "));
+var modesSeen = {};
+for (var md = 1; md <= MAX_LEVEL; md++) modesSeen[LEVELS[md].mode] = true;
+for (var mk in modesSeen) check(MODE_LABEL[mk], "mode '" + mk + "' has no picker caption");
+print("all " + picks.length + " picker buttons are captioned (" + keysOf(modesSeen).join(", ") + ")");
 print("picker offers " + picks.length + " levels and starts closed");
 
 // the pill opens and closes it
