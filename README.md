@@ -54,6 +54,8 @@ Without one, the game still plays normally and the speaker button says so.
 | 17 | **Read a word** | picture + audio, pick the written word |
 | 18 | **Read a word** | written word, pick the picture |
 
+Levels 1–16 take 10 correct answers to clear; the two reading levels take 20.
+
 Levels 6–13 ask for the exact nikud mark. Level 13 always puts a shva against one
 other mark, so the child is deciding "shva or not" rather than comparing two full
 vowels. Levels 14–16 ask for the vowel *sound*,
@@ -97,8 +99,9 @@ At the top of the `<script>` block in `index.html`:
 
 ```js
 var CONFIG = {
-  correctAnswersPerLevel: 10,  // correct answers needed to clear a level
-  numberOfLevels: 18           // play only the first N levels, then the trophy
+  correctAnswersPerLevel: 10,        // correct answers needed to clear a level
+  correctAnswersPerReadingLevel: 20, // same, for the reading levels (17 and 18)
+  numberOfLevels: 18                 // play only the first N levels, then the trophy
 };
 ```
 

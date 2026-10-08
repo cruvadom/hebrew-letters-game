@@ -325,10 +325,22 @@ print("hidden after a wrong answer, revealed after the right one");
 print("");
 print("=== progression ===");
 print("CONFIG: correctAnswersPerLevel=" + CONFIG.correctAnswersPerLevel +
+      ", correctAnswersPerReadingLevel=" + CONFIG.correctAnswersPerReadingLevel +
       ", numberOfLevels=" + CONFIG.numberOfLevels +
-      "  ->  TARGET=" + TARGET + ", LAST_LEVEL=" + LAST_LEVEL + " of " + MAX_LEVEL);
+      "  ->  TARGET=" + TARGET + ", READING_TARGET=" + READING_TARGET +
+      ", LAST_LEVEL=" + LAST_LEVEL + " of " + MAX_LEVEL);
 check(TARGET === CONFIG.correctAnswersPerLevel, "TARGET does not follow CONFIG");
+check(READING_TARGET === CONFIG.correctAnswersPerReadingLevel, "READING_TARGET does not follow CONFIG");
 check(LAST_LEVEL === Math.min(CONFIG.numberOfLevels, MAX_LEVEL), "LAST_LEVEL does not follow CONFIG");
+
+/* only the reading levels use the longer target */
+var wrongTarget = [];
+for (var tl = 1; tl <= MAX_LEVEL; tl++) {
+  var want = (LEVELS[tl].mode === "readword" || LEVELS[tl].mode === "readpic") ? READING_TARGET : TARGET;
+  if (targetFor(tl) !== want) wrongTarget.push(tl);
+}
+check(wrongTarget.length === 0, "wrong target on level(s) " + wrongTarget.join(", "));
+print("levels 1-16 need " + targetFor(1) + ", levels 17-18 need " + targetFor(17));
 
 level = 1; solved = 0; stars = 0; cycles = 0;
 nextQuestion();
@@ -349,7 +361,9 @@ print("progress " + before + " survived a mistake; retry earned nothing");
 
 level = 1; solved = 0; stars = 0; cycles = 0;
 nextQuestion();
-var sweep = TARGET * LAST_LEVEL, visited = {};
+var sweep = 0;
+for (var sl2 = 1; sl2 <= LAST_LEVEL; sl2++) sweep += targetFor(sl2);
+var visited = {};
 for (t = 0; t < sweep - 1; t++) { visited[level] = true; clickCorrect(); nextQuestion(); }
 visited[level] = true;
 clickCorrect();
@@ -357,6 +371,28 @@ check(cycles === 1, "expected one trophy after " + sweep + " correct, got " + cy
 check(level === 1, "should wrap back to level 1, got " + level);
 check(keysOf(visited).length === LAST_LEVEL, "visited " + keysOf(visited).length + " levels, expected " + LAST_LEVEL);
 print(sweep + " correct -> levels " + keysOf(visited).join(",") + ", trophy " + cycles + ", back to level " + level);
+
+/* each reading level really does take the longer run */
+level = 17; solved = 0; stars = 0; cycles = 0;
+nextQuestion();
+for (t = 0; t < READING_TARGET - 1; t++) { clickCorrect(); nextQuestion(); }
+check(level === 17, "level 17 advanced after only " + (READING_TARGET - 1) + " correct");
+clickCorrect();
+check(level === 18, "level 17 should advance after " + READING_TARGET + " correct, got level " + level);
+print("level 17 takes " + READING_TARGET + " correct answers to clear");
+
+/* the progress bar and its dots follow the level's own target */
+level = 17; solved = 0; renderHud();
+check(IDS.pips.children.length === READING_TARGET,
+  "level 17 drew " + IDS.pips.children.length + " dots, expected " + READING_TARGET);
+check(IDS.progressText._text.indexOf("/ " + READING_TARGET) !== -1,
+  "level 17 progress reads '" + IDS.progressText._text + "'");
+check(IDS.pips._cls.indexOf("many") !== -1, "a long level should use the slim dots");
+level = 1; solved = 0; renderHud();
+check(IDS.pips.children.length === TARGET,
+  "level 1 drew " + IDS.pips.children.length + " dots, expected " + TARGET);
+check(IDS.pips._cls.indexOf("many") === -1, "a short level should use the normal dots");
+print("progress bar shows " + READING_TARGET + " slim dots on 17 and " + TARGET + " on level 1");
 
 // ---------------------------------------------------------------- speech
 print("");
@@ -884,7 +920,7 @@ check(SPOKEN.length === 0, "level 18 spoke the word before the answer: " + SPOKE
 IDS.say.click();
 flushTimers();
 check(SPOKEN.length === 0, "level 18 read the word aloud on demand, which gives it away");
-var theWord18 = vocalized(current.word);
+var theWord18 = SAY[current.word];
 clickCorrect();
 flushTimers();
 check(SPOKEN.length > 0 && SPOKEN[SPOKEN.length - 1] === theWord18,

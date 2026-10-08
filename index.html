@@ -233,6 +233,17 @@
       transform: scale(1.12);
     }
 
+    /* A longer level needs slimmer dots to stay on one row. */
+    .pips.many {
+      gap: 3px;
+    }
+
+    .pips.many .pip {
+      max-width: 16px;
+      height: 12px;
+      border-width: 1px;
+    }
+
     .card {
       background: linear-gradient(180deg, var(--cream) 0%, var(--cream2) 100%);
       border-radius: 28px;
@@ -600,6 +611,9 @@
     var CONFIG = {
       /* How many correct answers are needed to clear a level. */
       correctAnswersPerLevel: 10,
+
+      /* Same, for the reading levels (17 and 18), which are worth more practice. */
+      correctAnswersPerReadingLevel: 20,
 
       /* How many levels to play before the trophy. Set it to 6, for example,
          and levels 7-18 are skipped: finishing level 6 awards the trophy and
@@ -1242,6 +1256,12 @@
     var MAX_LEVEL = LEVELS.length - 1;
     var LAST_LEVEL = Math.max(1, Math.min(CONFIG.numberOfLevels, MAX_LEVEL));
     var TARGET = Math.max(1, CONFIG.correctAnswersPerLevel);
+    var READING_TARGET = Math.max(1, CONFIG.correctAnswersPerReadingLevel);
+
+    /* The reading levels ask for more correct answers than the letter levels. */
+    function targetFor(lvl) {
+      return isWordMode(LEVELS[lvl].mode) ? READING_TARGET : TARGET;
+    }
     var LETTER_CAP = 8;     /* keeps common letters from crowding out rare ones */
 
     function lastChar(w) { return w.charAt(w.length - 1); }
@@ -1845,7 +1865,7 @@
     function renderHud() {
       el.levelPill.textContent = LEVELS[level].label;
       el.starsPill.textContent = "⭐ " + stars;
-      el.progressText.textContent = "✅ " + solved + " / " + TARGET;
+      el.progressText.textContent = "✅ " + solved + " / " + targetFor(level);
       applyWorld(level);
       markPicker();
 
@@ -1856,8 +1876,10 @@
         el.cyclesPill.classList.add("hidden");
       }
 
+      var goal = targetFor(level);
+      el.pips.className = goal > 12 ? "pips many" : "pips";
       el.pips.innerHTML = "";
-      for (var i = 0; i < TARGET; i++) {
+      for (var i = 0; i < goal; i++) {
         var pip = document.createElement("div");
         pip.className = i < solved ? "pip on" : "pip";
         el.pips.appendChild(pip);
@@ -1974,7 +1996,7 @@
       if (firstTry) {
         stars++;
         solved++;
-        if (solved >= TARGET) promoted = advance();
+        if (solved >= targetFor(level)) promoted = advance();
       }
       renderHud();
       bump(promoted ? el.levelPill : el.starsPill);
