@@ -65,7 +65,7 @@ function mkEl(tag) {
 var IDS = {};
 var idList = ["picture", "word", "options", "banner", "prompt", "say", "reset",
               "levelPill", "starsPill", "cyclesPill", "progressText", "pips", "levelPicker",
-              "sky", "skyNext"];
+              "sky", "skyNext", "sayrow"];
 for (var ii = 0; ii < idList.length; ii++) IDS[idList[ii]] = mkEl("div");
 
 var DOC_LISTENERS = {};
@@ -186,7 +186,9 @@ function sample(lvl, n) {
     nextQuestion();
     var vals = values();
     var expect;
-    if (LEVELS[lvl].mode === "nikud" || LEVELS[lvl].mode === "sound") {
+    if (LEVELS[lvl].mode === "readword" || LEVELS[lvl].mode === "readpic") {
+      expect = LEVELS[lvl].options || 3;
+    } else if (LEVELS[lvl].mode === "nikud" || LEVELS[lvl].mode === "sound") {
       if (LEVELS[lvl].contrast) {
         expect = 2;
       } else {
@@ -721,14 +723,14 @@ print("=== worlds ===");
 dropTimers();
 
 /* The sky must change after levels 2, 5 and 13 and nowhere else. */
-var expectedBoundaries = [3, 6, 14];
+var expectedBoundaries = [3, 6, 14, 17];
 var switches = [];
 for (var wl = 2; wl <= MAX_LEVEL; wl++) {
   if (worldOf(wl) !== worldOf(wl - 1)) switches.push(wl);
 }
 check(switches.join(",") === expectedBoundaries.join(","),
   "sky changes entering levels " + switches.join(",") + ", expected " + expectedBoundaries.join(","));
-print("sky changes entering levels " + switches.join(", ") + " (after 2, 5 and 13)");
+print("sky changes entering levels " + switches.join(", ") + " (after 2, 5, 13 and 16)");
 
 var wmap = [];
 for (var wi = 1; wi <= MAX_LEVEL; wi++) wmap.push(worldOf(wi));
@@ -736,7 +738,8 @@ print("level -> world: " + wmap.join(" "));
 check(worldOf(1) === 0 && worldOf(2) === 0, "levels 1-2 should share the first world");
 check(worldOf(5) === 1 && worldOf(3) === 1, "levels 3-5 should share the second world");
 check(worldOf(6) === 2 && worldOf(13) === 2, "levels 6-13 should share the third world");
-check(worldOf(14) === 3 && worldOf(MAX_LEVEL) === 3, "levels 14+ should share the last world");
+check(worldOf(14) === 3 && worldOf(16) === 3, "levels 14-16 should share the fourth world");
+check(worldOf(17) === 4 && worldOf(MAX_LEVEL) === 4, "levels 17+ should share the last world");
 
 // each world needs its own distinct colours
 var seenSkies = {};
@@ -794,6 +797,137 @@ check(IDS.sky.style.background.indexOf(WORLDS[2].deep) !== -1,
   "the final world should win after an interrupted fade");
 check(IDS.skyNext.style.opacity === "0", "the spare layer should end up hidden");
 print("an interrupted crossfade settles on the final world");
+
+// -------------------------------------------------------- reading levels
+print("");
+print("=== reading levels (17 picture->word, 18 word->picture) ===");
+dropTimers();
+
+check(LEVELS[17].mode === "readword", "level 17 should be picture -> word");
+check(LEVELS[18].mode === "readpic", "level 18 should be word -> picture");
+
+// every word must have a vocalized form to show, and they must be unique
+var noNikud = [], seenVoc = {}, dupVoc = [];
+for (var wi = 0; wi < WORDS.length; wi++) {
+  var vw = WORDS[wi].word;
+  if (!SAY[vw]) noNikud.push(vw);
+  if (seenVoc[vocalized(vw)]) dupVoc.push(vw);
+  seenVoc[vocalized(vw)] = true;
+}
+check(noNikud.length === 0, "words with no vocalized form: " + noNikud.join(" "));
+check(dupVoc.length === 0, "two words share a vocalized form: " + dupVoc.join(" "));
+print(WORDS.length + " words all have a unique vocalized spelling");
+
+// level 17: three written words, one correct, all distinct
+level = 17; solved = 0;
+var badCount = 0, missing = 0, dupOpt = 0, plainShown = 0, sameAsAnswer = 0;
+for (var q17 = 0; q17 < 600; q17++) {
+  nextQuestion();
+  var v17 = values(), f17 = faces(), uniq = {}, hasAnswer = false, j;
+  if (v17.length !== 3) badCount++;
+  for (j = 0; j < v17.length; j++) {
+    uniq[v17[j]] = true;
+    if (v17[j] === currentAnswer) hasAnswer = true;
+    if (f17[j] !== vocalized(v17[j])) plainShown++;
+  }
+  if (!hasAnswer) missing++;
+  if (keysOf(uniq).length !== v17.length) dupOpt++;
+  if (currentAnswer !== current.word) sameAsAnswer++;
+}
+check(badCount === 0, "level 17 showed the wrong number of options " + badCount + " times");
+check(missing === 0, "level 17 omitted the answer " + missing + " times");
+check(dupOpt === 0, "level 17 repeated an option " + dupOpt + " times");
+check(plainShown === 0, "level 17 showed " + plainShown + " options without nikud");
+check(sameAsAnswer === 0, "level 17 answer key does not match the word");
+print("level 17: 3 vocalized words, answer always present, never duplicated");
+
+// the picture is shown and the word is never revealed up front
+level = 17; solved = 0; nextQuestion();
+check(IDS.picture._text === current.pic, "level 17 should show the picture");
+check(IDS.word._text === "", "level 17 leaked the word before it was earned");
+check(IDS.sayrow._cls.indexOf("hidden") === -1, "level 17 should offer the listen button");
+print("level 17 card: " + IDS.picture._text + "   options: " + faces().join("   "));
+
+// level 18: three pictures, one correct, the word is the question
+level = 18; solved = 0;
+var picBad = 0, picMissing = 0, picDup = 0, notEmoji = 0;
+for (var q18 = 0; q18 < 600; q18++) {
+  nextQuestion();
+  var v18 = values(), f18 = faces(), u18 = {}, has18 = false, k;
+  if (v18.length !== 3) picBad++;
+  for (k = 0; k < v18.length; k++) {
+    u18[v18[k]] = true;
+    if (v18[k] === currentAnswer) has18 = true;
+    if (f18[k] !== BY_WORD[v18[k]].pic) notEmoji++;
+  }
+  if (!has18) picMissing++;
+  if (keysOf(u18).length !== v18.length) picDup++;
+}
+check(picBad === 0, "level 18 showed the wrong number of options " + picBad + " times");
+check(picMissing === 0, "level 18 omitted the answer " + picMissing + " times");
+check(picDup === 0, "level 18 repeated a picture " + picDup + " times");
+check(notEmoji === 0, "level 18 showed " + notEmoji + " options that were not pictures");
+print("level 18: 3 pictures, answer always present, never duplicated");
+
+level = 18; solved = 0; nextQuestion();
+check(IDS.picture._text === vocalized(current.word), "level 18 should show the vocalized word");
+check(IDS.picture._cls.indexOf("asword") !== -1, "level 18 should style the card as text");
+check(IDS.sayrow._cls.indexOf("hidden") !== -1, "level 18 must hide the listen button");
+check(IDS.word._text === "", "level 18 leaked the answer before it was earned");
+print("level 18 card: " + IDS.picture._text + "   options: " + faces().join("  "));
+
+// level 18 must stay silent until the child has answered, then speak the word
+level = 18; solved = 0; dropTimers(); SPOKEN = [];
+nextQuestion();
+flushTimers();
+check(SPOKEN.length === 0, "level 18 spoke the word before the answer: " + SPOKEN.join("/"));
+IDS.say.click();
+flushTimers();
+check(SPOKEN.length === 0, "level 18 read the word aloud on demand, which gives it away");
+var theWord18 = vocalized(current.word);
+clickCorrect();
+flushTimers();
+check(SPOKEN.length > 0 && SPOKEN[SPOKEN.length - 1] === theWord18,
+  "level 18 should read the word out once answered, heard " + SPOKEN.join(" / "));
+print("level 18 stays silent until answered, then reads the word as a reward");
+
+// level 17 may speak freely
+level = 17; solved = 0; dropTimers(); SPOKEN = [];
+nextQuestion();
+flushTimers();
+check(SPOKEN.length === 1, "level 17 should read the word out, heard " + SPOKEN.length);
+print("level 17 reads the word out as usual");
+
+// distractors have to be genuinely confusable
+var sharedFirst = 0, sameLen = 0, total17 = 0;
+level = 17; solved = 0;
+for (var d17 = 0; d17 < 600; d17++) {
+  nextQuestion();
+  var dv = values();
+  for (var di = 0; di < dv.length; di++) {
+    if (dv[di] === currentAnswer) continue;
+    total17++;
+    if (dv[di].charAt(0) === currentAnswer.charAt(0)) sharedFirst++;
+    if (dv[di].length === currentAnswer.length) sameLen++;
+  }
+}
+var pctFirst = Math.round(sharedFirst * 100 / total17);
+var pctLen = Math.round(sameLen * 100 / total17);
+check(pctFirst >= 50, "only " + pctFirst + "% of distractors share the opening letter");
+check(pctLen >= 50, "only " + pctLen + "% of distractors match the word length");
+print("distractors share the opening letter " + pctFirst + "% and the length " + pctLen + "% of the time");
+
+// a word must never be offered against itself
+level = 18; solved = 0;
+var selfClash = 0;
+for (var s18 = 0; s18 < 400; s18++) {
+  nextQuestion();
+  var sv = values(), hits = 0;
+  for (var sj = 0; sj < sv.length; sj++) if (sv[sj] === currentAnswer) hits++;
+  if (hits !== 1) selfClash++;
+}
+check(selfClash === 0, "the answer appeared more than once in " + selfClash + " rounds");
+print("the answer is offered exactly once per round");
 
 print("");
 print(failures === 0 ? "ALL CHECKS PASSED" : failures + " CHECK(S) FAILED");

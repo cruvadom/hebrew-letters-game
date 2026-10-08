@@ -257,6 +257,17 @@
       font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
     }
 
+    /* On the read-the-word level the card shows the word instead of a picture. */
+    .picture.asword {
+      font-size: clamp(46px, 13vw, 72px);
+      font-weight: 800;
+      font-family: inherit;
+      color: var(--ink);
+      animation: none;
+      padding: 18px 6px;
+      letter-spacing: .02em;
+    }
+
     .word {
       height: 46px;
       font-size: 38px;
@@ -274,6 +285,10 @@
 
     .sayrow {
       margin-top: 6px;
+    }
+
+    .sayrow.hidden {
+      display: none;
     }
 
     .say {
@@ -313,6 +328,27 @@
       grid-template-columns: repeat(3, 1fr);
       gap: 14px;
       margin-top: 20px;
+    }
+
+    /* Whole words as options: one per row, so long words stay readable. */
+    .options.words {
+      grid-template-columns: 1fr;
+      gap: 11px;
+      max-width: 520px;
+      margin-inline: auto;
+    }
+
+    .options.words .opt {
+      font-size: clamp(30px, 8vw, 42px);
+      padding: 14px 10px 16px;
+      letter-spacing: .02em;
+    }
+
+    /* Pictures as options. */
+    .options.pics .opt {
+      font-size: clamp(50px, 15vw, 76px);
+      font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+      padding: 16px 6px 18px;
     }
 
     .options.two {
@@ -541,7 +577,7 @@
       <div class="prompt" id="prompt">מה רואים בתמונה?</div>
       <div class="picture" id="picture">🐸</div>
       <div class="word" id="word"></div>
-      <div class="sayrow">
+      <div class="sayrow" id="sayrow">
         <button class="say" id="say" type="button">🔊 תגיד לי שוב</button>
       </div>
     </div>
@@ -566,9 +602,9 @@
       correctAnswersPerLevel: 10,
 
       /* How many levels to play before the trophy. Set it to 6, for example,
-         and levels 7-16 are skipped: finishing level 6 awards the trophy and
-         starts over at level 1. Maximum is 16. */
-      numberOfLevels: 16
+         and levels 7-18 are skipped: finishing level 6 awards the trophy and
+         starts over at level 1. Maximum is 18. */
+      numberOfLevels: 18
     };
     /* ==================================================================== */
 
@@ -1036,7 +1072,7 @@
       "משאית": "מַשָּׂאִית", "אופנוע": "אוֹפַנּוֹעַ", "סירה": "סִירָה", "מגדל": "מִגְדָּל",
       "אי": "אִי", "מדבר": "מִדְבָּר", "אוהל": "אֹהֶל", "גשר": "גֶּשֶׁר",
       "מפה": "מַפָּה", "שער": "שַׁעַר", "חכה": "חַכָּה", "וו": "וָו",
-      "חוט": "חוּט", "קשר": "קֶשֶׁר", "חצוצרה": "חֲצוֹצְרָה", "אוזניות": "אָזְנִיּוֹת",
+      "חוט": "חוּט", "קשר": "קֶשֶׁר", "חצוצרה": "חֲצוֹצְרָה", "אוזניות": "אוֹזְנִיּוֹת",
       "רדיו": "רַדְיוֹ", "טלוויזיה": "טֶלֶוִיזְיָה", "עיתון": "עִתּוֹן", "דגל": "דֶּגֶל",
       "קרקס": "קִרְקָס", "תמונה": "תְּמוּנָה", "מקלחת": "מִקְלַחַת", "עלה": "עָלֶה",
       "זרע": "זֶרַע", "זר": "זֵר", "עציץ": "עָצִיץ", "רוח": "רוּחַ",
@@ -1190,6 +1226,16 @@
       {
         mode: "sound", label: "שלב 16", prompt: "באיזה צליל מתחילה המילה?",
         groups: [{ chars: "AEIOU", weight: 1 }], options: 3
+      },
+
+      {
+        mode: "readword", label: "שלב 17", prompt: "איזו מילה מתאימה לתמונה?",
+        groups: [{ chars: "*", weight: 1 }], options: 3
+      },
+
+      {
+        mode: "readpic", label: "שלב 18", prompt: "איזו תמונה מתאימה למילה?",
+        groups: [{ chars: "*", weight: 1 }], options: 3
       }
     ];
 
@@ -1203,10 +1249,14 @@
     /* "nikud" asks for the exact mark, "sound" asks for the vowel sound. */
     function isVowelMode(mode) { return mode === "nikud" || mode === "sound"; }
 
+    /* The reading levels answer with a whole word rather than a single mark. */
+    function isWordMode(mode) { return mode === "readword" || mode === "readpic"; }
+
     function keyOf(entry, mode) {
       if (mode === "first") return entry.letter;
       if (mode === "last") return lastChar(entry.word);
       if (mode === "sound") return SOUND_OF[NIKUD[entry.word]] || "";
+      if (isWordMode(mode)) return entry.word;
       return NIKUD[entry.word] || "";
     }
 
@@ -1214,9 +1264,11 @@
        rare letters still come up regularly instead of drowning in the common ones. */
     function buildGroup(mode, chars) {
       var byKey = {}, keys = [];
+      var everything = chars === "*";
       for (var i = 0; i < WORDS.length; i++) {
         var k = keyOf(WORDS[i], mode);
-        if (!k || chars.indexOf(k) === -1) continue;
+        if (!k) continue;
+        if (!everything && chars.indexOf(k) === -1) continue;
         if (!byKey[k]) { byKey[k] = []; keys.push(k); }
         byKey[k].push(WORDS[i]);
       }
@@ -1249,6 +1301,7 @@
       cyclesPill: document.getElementById("cyclesPill"),
       progressText: document.getElementById("progressText"),
       levelPicker: document.getElementById("levelPicker"),
+      sayrow: document.getElementById("sayrow"),
       sky: document.getElementById("sky"),
       skyNext: document.getElementById("skyNext"),
       pips: document.getElementById("pips")
@@ -1458,10 +1511,67 @@
       }
     }
 
-    /* ---------- rounds ---------- */
+    /* ---------- lookalike words ----------
+       The reading levels are only worth anything if the wrong answers are
+       tempting, so distractors are the words that look most like the answer:
+       same opening letter, same length, same ending, letters in common. A child
+       who reads only the first letter should not be able to guess. */
+    var BY_WORD = {};
+    (function () {
+      for (var i = 0; i < WORDS.length; i++) BY_WORD[WORDS[i].word] = WORDS[i];
+    })();
+
+    function letterBag(w) {
+      var bag = {};
+      for (var i = 0; i < w.length; i++) bag[w.charAt(i)] = (bag[w.charAt(i)] || 0) + 1;
+      return bag;
+    }
+
+    function similarity(target, bag, other) {
+      if (other === target) return -1;
+      var score = 0;
+      if (other.charAt(0) === target.charAt(0)) score += 4;
+      if (other.length === target.length) score += 3;
+      else if (Math.abs(other.length - target.length) === 1) score += 1;
+      if (lastChar(other) === lastChar(target)) score += 2;
+      if (NIKUD[other] && NIKUD[other] === NIKUD[target]) score += 2;
+
+      var seen = {};
+      for (var i = 0; i < other.length; i++) {
+        var c = other.charAt(i);
+        seen[c] = (seen[c] || 0) + 1;
+        if (bag[c] && seen[c] <= bag[c]) score += 1;
+      }
+      return score;
+    }
+
+    /* Returns the n most confusable words, chosen at random from a pool of the
+       closest matches so the same trio does not come up every time. */
+    function lookalikes(target, n) {
+      var bag = letterBag(target);
+      var scored = [];
+      for (var i = 0; i < WORDS.length; i++) {
+        var w = WORDS[i].word;
+        var s = similarity(target, bag, w);
+        if (s >= 0) scored.push({ word: w, score: s });
+      }
+      scored.sort(function (a, b) { return b.score - a.score; });
+
+      var poolSize = Math.min(scored.length, Math.max(n * 4, 10));
+      var pool = [];
+      for (var p = 0; p < poolSize; p++) pool.push(scored[p].word);
+      shuffle(pool);
+      return pool.slice(0, n);
+    }
+
     /* Distractors come from the same group as the answer, so level 4 pits sofit forms
        against other sofit forms rather than against easy plain letters. */
+    /* ---------- rounds ---------- */
     function buildChoices(correct, group) {
+      if (isWordMode(LEVELS[level].mode)) {
+        var n = (LEVELS[level].options || 3) - 1;
+        return shuffle([correct].concat(lookalikes(correct, n)));
+      }
       if (isVowelMode(LEVELS[level].mode)) {
         var cfg = LEVELS[level];
         var all = [];
@@ -1516,11 +1626,19 @@
 
     function isNikudLevel() { return LEVELS[level].mode === "nikud"; }
     function isSoundLevel() { return LEVELS[level].mode === "sound"; }
+    function isReadWordLevel() { return LEVELS[level].mode === "readword"; }
+    function isReadPicLevel() { return LEVELS[level].mode === "readpic"; }
+
+    /* The written form shown to the child: fully vocalized, from SAY. */
+    function vocalized(w) { return SAY[w] || w; }
 
     /* The vowel levels show the word's own first letter carrying each option.
        The sound levels use one canonical mark per sound, so the shape of the
        mark never hints at which button is the right one. */
     function faceOf(value) {
+      if (isReadWordLevel()) return vocalized(value);
+      if (isReadPicLevel()) return BY_WORD[value].pic;
+
       var first = current.word.charAt(0);
 
       if (isSoundLevel()) {
@@ -1539,10 +1657,14 @@
     function nameOf(value) {
       if (isSoundLevel()) return SOUND_NAMES[value];
       if (isNikudLevel()) return NIKUD_NAMES[value];
+      if (isWordMode(LEVELS[level].mode)) return value;
       return LETTER_NAMES[value] || "";
     }
 
     function revealText() {
+      if (isReadWordLevel()) return vocalized(current.word);
+      /* The word is already on screen as the question, so show the picture. */
+      if (isReadPicLevel()) return current.pic;
       if (!isNikudLevel() && !isSoundLevel()) return current.word;
 
       var w = current.word;
@@ -1568,7 +1690,8 @@
       { from: 1, deep: "#12314a", mid: "#1f6f7a", shore: "#37b3a0" },  /* ocean    */
       { from: 3, deep: "#231145", mid: "#6d3b86", shore: "#c86b8a" },  /* twilight */
       { from: 6, deep: "#0f2e22", mid: "#2b6b4a", shore: "#7fb069" },  /* forest   */
-      { from: 14, deep: "#2d1220", mid: "#8a3a3a", shore: "#e0915a" }  /* embers   */
+      { from: 14, deep: "#2d1220", mid: "#8a3a3a", shore: "#e0915a" }, /* embers   */
+      { from: 17, deep: "#150b2e", mid: "#2d3a8c", shore: "#3aa8e0" }  /* cosmos   */
     ];
 
     function worldOf(lvl) {
@@ -1624,7 +1747,10 @@
       }, 1200);
     }
     /* ---------- level picker ---------- */
-    var MODE_LABEL = { first: "ראשונה", last: "אחרונה", nikud: "ניקוד", sound: "ניקוד" };
+    var MODE_LABEL = {
+      first: "ראשונה", last: "אחרונה", nikud: "ניקוד",
+      sound: "ניקוד", readword: "קריאה", readpic: "קריאה"
+    };
 
     function buildPicker() {
       el.levelPicker.innerHTML = "";
@@ -1696,8 +1822,21 @@
       firstTry = true;
       locked = false;
 
-      el.picture.textContent = current.pic;
-      /* The word is the answer, so it is not written into the page until it is earned. */
+      /* On the read-the-word level the card carries the written word and the
+         child gets no audio until they have answered; everywhere else it shows
+         the picture and may be read aloud. */
+      var readingOnly = isReadPicLevel();
+      if (readingOnly) {
+        el.picture.textContent = vocalized(current.word);
+        el.picture.className = "picture asword";
+        el.sayrow.className = "sayrow hidden";
+      } else {
+        el.picture.textContent = current.pic;
+        el.picture.className = "picture";
+        el.sayrow.className = "sayrow";
+      }
+
+      /* The answer is not written into the page until it is earned. */
       el.word.textContent = "";
       el.word.classList.remove("show");
       el.banner.textContent = "";
@@ -1707,7 +1846,11 @@
       el.options.innerHTML = "";
       var correct = currentAnswer;
       var choices = buildChoices(correct, currentGroup);
-      el.options.className = choices.length === 2 ? "options two" : "options";
+      var shape = "options";
+      if (choices.length === 2) shape += " two";
+      if (isReadWordLevel()) shape += " words";
+      if (isReadPicLevel()) shape += " pics";
+      el.options.className = shape;
 
       for (var i = 0; i < choices.length; i++) {
         (function (value) {
@@ -1728,7 +1871,7 @@
       void card.offsetWidth;
       card.style.animation = "";
 
-      sayWord();
+      if (!readingOnly) sayWord();
     }
 
     /* Returns the celebration text when a level or a full round was just completed. */
@@ -1748,7 +1891,7 @@
     var LETTER_NAME_MS = 1250;
 
     function sayLetter(value) {
-      if (isNikudLevel() || isSoundLevel()) return 0;
+      if (isNikudLevel() || isSoundLevel() || isWordMode(LEVELS[level].mode)) return 0;
       speak(LETTER_SAY[value] || LETTER_NAMES[value] || value, 0.8);
       return LETTER_NAME_MS;
     }
@@ -1805,9 +1948,13 @@
       setTimeout(nextQuestion, spoken + 2100);
     }
 
+    /* On the read-the-word level hearing the word would be the answer, so audio
+       is held back until the child has picked a picture. */
+    function mayHearWord() { return !isReadPicLevel() || locked; }
+
     el.say.addEventListener("click", function () {
       ensureAudio();
-      sayWord(0.75);
+      if (mayHearWord()) sayWord(0.75);
     });
 
     el.levelPill.addEventListener("click", function () {
@@ -1829,7 +1976,7 @@
       document.removeEventListener("pointerdown", once);
       touched = true;
       ensureAudio();
-      sayWord();
+      if (mayHearWord()) sayWord();
     });
 
     buildPicker();
