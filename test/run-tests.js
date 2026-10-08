@@ -929,5 +929,81 @@ for (var s18 = 0; s18 < 400; s18++) {
 check(selfClash === 0, "the answer appeared more than once in " + selfClash + " rounds");
 print("the answer is offered exactly once per round");
 
+// ------------------------------------------- simplified pointing on screen
+print("");
+print("=== simplified pointing for the reading levels ===");
+var HATAFS = "\u05B1\u05B2\u05B3";
+var DAGESH_CHAR = "\u05BC";
+
+var hatafLeft = [], badDot = [], lostShuruk = [], lostBkp = [];
+for (var si = 0; si < WORDS.length; si++) {
+  var sw = WORDS[si].word;
+  var shown = vocalized(sw), full = SAY[sw];
+  var m;
+
+  for (m = 0; m < shown.length; m++) {
+    if (HATAFS.indexOf(shown.charAt(m)) !== -1) { hatafLeft.push(sw); break; }
+  }
+
+  /* every remaining dot must sit on ב כ פ or on a bare vav (shuruk) */
+  for (m = 0; m < shown.length; m++) {
+    if (shown.charAt(m) !== DAGESH_CHAR) continue;
+    var b = m - 1;
+    while (b >= 0 && COMBINING.indexOf(shown.charAt(b)) !== -1) b--;
+    var base = b >= 0 ? shown.charAt(b) : "";
+    if ("בכפ".indexOf(base) !== -1) continue;
+    if (base === VAV) {
+      var hasV = false;
+      for (var mm = b + 1; mm < shown.length && COMBINING.indexOf(shown.charAt(mm)) !== -1; mm++) {
+        if (VOWEL_MARKS.indexOf(shown.charAt(mm)) !== -1) hasV = true;
+      }
+      if (!hasV) continue;
+    }
+    badDot.push(sw + " (" + shown + ", dot on " + base + ")");
+    break;
+  }
+
+  /* nothing that changes the sound may be dropped */
+  function dots(txt, letters) {
+    var n = 0;
+    for (var t = 0; t < txt.length; t++) {
+      if (txt.charAt(t) !== DAGESH_CHAR) continue;
+      var p = t - 1;
+      while (p >= 0 && COMBINING.indexOf(txt.charAt(p)) !== -1) p--;
+      if (p >= 0 && letters.indexOf(txt.charAt(p)) !== -1) n++;
+    }
+    return n;
+  }
+  if (dots(shown, "בכפ") !== dots(full, "בכפ")) lostBkp.push(sw + " " + full + " -> " + shown);
+  if (shown.indexOf(VAV + DAGESH_CHAR) === -1 && full.indexOf(VAV + DAGESH_CHAR) !== -1) {
+    lostShuruk.push(sw + " " + full + " -> " + shown);
+  }
+}
+
+check(hatafLeft.length === 0, "hataf marks still shown in: " + hatafLeft.join(" "));
+check(badDot.length === 0, "dot kept where it should be dropped: " + badDot.join(", "));
+check(lostBkp.length === 0, "lost a ב/כ/פ dot that changes the sound: " + lostBkp.join(", "));
+check(lostShuruk.length === 0, "lost a shuruk: " + lostShuruk.join(", "));
+print("no hataf marks on screen; dots survive only on ב כ פ and shuruk");
+
+var changed = 0;
+for (var ci = 0; ci < WORDS.length; ci++) {
+  if (vocalized(WORDS[ci].word) !== SAY[WORDS[ci].word]) changed++;
+}
+print(changed + " of " + WORDS.length + " words display more simply than they are spoken");
+
+/* speech must keep the full pointing */
+level = 17; solved = 0; dropTimers(); SPOKEN = [];
+nextQuestion();
+flushTimers();
+check(SPOKEN[0] === SAY[current.word],
+  "speech should use the full pointing, heard '" + SPOKEN[0] + "'");
+print("speech still uses the full pointing: " + SPOKEN[0]);
+
+var samples = ["כיסא", "תפוח", "סבון", "שוק", "עפיפון", "טווס", "אגוז", "סוכרייה", "קובייה", "דובי"];
+for (var sx = 0; sx < samples.length; sx++) {
+  print("  " + SAY[samples[sx]] + "   ->   " + vocalized(samples[sx]));
+}
+
 print("");
 print(failures === 0 ? "ALL CHECKS PASSED" : failures + " CHECK(S) FAILED");

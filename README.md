@@ -64,13 +64,19 @@ so the shape of the mark never hints at which answer is right.
 
 Levels 17 and 18 move from letters to whole words, fully vocalized. Level 17 shows a
 picture and reads it aloud; level 18 shows only the word and stays silent until the
-child has chosen, so it is pure reading, with the audio arriving as the reward. The
-wrong answers are the words that look most like the right one — same opening letter,
-same length, same ending — so skimming the first letter is not enough:
+child has chosen, so it is pure reading, with the audio arriving as the reward.
+
+The pointing shown on these levels is deliberately simpler than the pointing used for
+speech: hataf vowels are written plainly (עֲ becomes עַ) and the dot inside a letter is
+kept only where it still changes the sound, which means ב כ פ and a vav standing for
+shuruk. So כִּסֵּא is shown as כִּסֵא and תַּפּוּחַ as תַפּוּחַ, while סַבּוֹן and שׁוּק keep their dots.
+
+The wrong answers are the words that look most like the right one — same opening
+letter, same length, same ending — so skimming the first letter is not enough:
 
 ```
-🧼  סַבּוֹן   סְבִיבוֹן   סָבְתָא
-סֻלָּם  →  🛶  🪜  👵
+🔔  פַּעַמוֹן   פִּינְגְוִין   פְּסַנְתֵר
+כִּנוֹר  →  🎻  ⭐  🏘️
 ```
 
 Within a level, answers are sampled so that rare letters still appear regularly and

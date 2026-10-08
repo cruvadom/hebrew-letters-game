@@ -1629,8 +1629,57 @@
     function isReadWordLevel() { return LEVELS[level].mode === "readword"; }
     function isReadPicLevel() { return LEVELS[level].mode === "readpic"; }
 
-    /* The written form shown to the child: fully vocalized, from SAY. */
-    function vocalized(w) { return SAY[w] || w; }
+    /* The written form shown to the child on the reading levels.
+       It is deliberately simpler than the pointing used for speech: compound
+       (hataf) vowels are written as their plain vowel, and the dot inside a
+       letter is kept only where it still changes the sound in modern Hebrew,
+       which means ב כ פ and a vav standing for shuruk. So לֵּ becomes לֵ and
+       עֲ becomes עַ, while סַבּוֹן and שׁוּק keep their dots. */
+    var HATAF_PLAIN = {
+      "\u05B2": "\u05B7",   /* חטף פתח  -> פתח  */
+      "\u05B1": "\u05B6",   /* חטף סגול -> סגול */
+      "\u05B3": "\u05B8"    /* חטף קמץ  -> קמץ  */
+    };
+    var VOWEL_MARKS = "\u05B0\u05B1\u05B2\u05B3\u05B4\u05B5\u05B6\u05B7\u05B8\u05B9\u05BA\u05BB";
+    var DAGESH_SOUNDS = "בכפ";
+
+    function simplifyMarks(base, marks) {
+      var hasVowel = false, k;
+      for (k = 0; k < marks.length; k++) {
+        if (VOWEL_MARKS.indexOf(marks.charAt(k)) !== -1) hasVowel = true;
+      }
+
+      var out = "";
+      for (k = 0; k < marks.length; k++) {
+        var c = marks.charAt(k);
+        if (HATAF_PLAIN[c]) { out += HATAF_PLAIN[c]; continue; }
+        if (c === DAGESH) {
+          /* A lone dot on a vav is a shuruk; anything else is a dagesh. */
+          var keep = base === VAV ? !hasVowel : DAGESH_SOUNDS.indexOf(base) !== -1;
+          if (!keep) continue;
+        }
+        out += c;
+      }
+      return out;
+    }
+
+    function vocalized(w) {
+      var src = SAY[w] || w;
+      var out = "";
+      var i = 0;
+      while (i < src.length) {
+        var base = src.charAt(i);
+        var marks = "";
+        var j = i + 1;
+        while (j < src.length && COMBINING.indexOf(src.charAt(j)) !== -1) {
+          marks += src.charAt(j);
+          j++;
+        }
+        out += base + simplifyMarks(base, marks);
+        i = j;
+      }
+      return out;
+    }
 
     /* The vowel levels show the word's own first letter carrying each option.
        The sound levels use one canonical mark per sound, so the shape of the
